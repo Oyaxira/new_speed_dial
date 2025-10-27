@@ -18,6 +18,7 @@ const defaultSettings = {
   autoOpenSidebar: false,
   maxRecentTabs: 20,
   showFavicons: true,
+  showApps: false,
   enableAnimations: true,
   customCSS: ''
 };
@@ -41,6 +42,7 @@ async function loadSettings() {
     document.getElementById('autoOpenSidebar').checked = settings.autoOpenSidebar;
     document.getElementById('maxRecentTabs').value = settings.maxRecentTabs;
     document.getElementById('showFavicons').checked = settings.showFavicons;
+    document.getElementById('showApps').checked = settings.showApps;
     document.getElementById('enableAnimations').checked = settings.enableAnimations;
     document.getElementById('customCSS').value = settings.customCSS || '';
 
@@ -77,6 +79,7 @@ async function saveSettings() {
       autoOpenSidebar: document.getElementById('autoOpenSidebar').checked,
       maxRecentTabs: parseInt(document.getElementById('maxRecentTabs').value),
       showFavicons: document.getElementById('showFavicons').checked,
+      showApps: document.getElementById('showApps').checked,
       enableAnimations: document.getElementById('enableAnimations').checked,
       customCSS: document.getElementById('customCSS').value
     };

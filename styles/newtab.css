@@ -72,7 +72,7 @@ body {
 /* 快速拨号项 */
 .dial-item {
   position: relative;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 9;
   background: var(--card-bg);
   border-radius: 12px;
   cursor: pointer;
@@ -118,12 +118,14 @@ body {
 }
 
 .dial-content.has-thumbnail .dial-title {
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-  color: white;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.5) 50%, transparent 100%);
+  color: #ffffff;
   width: 100%;
-  padding: 20px 12px 12px;
+  padding: 24px 12px 10px;
   margin: 0;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 1px 2px rgba(0, 0, 0, 0.6);
+  font-weight: 500;
+  letter-spacing: 0.3px;
 }
 
 .dial-favicon {

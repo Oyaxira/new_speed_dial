@@ -103,10 +103,10 @@ class UIManager {
     this.init();
   }
 
-  init() {
+  async init() {
     this.bindEvents();
     this.loadDials();
-    this.loadApps();
+    await this.loadAppsIfEnabled();
     this.loadRecentTabs();
     this.applySettings();
   }
@@ -210,7 +210,7 @@ class UIManager {
         // 如果有缩略图，显示缩略图作为背景
         content.style.backgroundImage = `url(${thumbnail})`;
         content.style.backgroundSize = 'contain';
-        content.style.backgroundPosition = 'center';
+        content.style.backgroundPosition = 'top center';
         content.classList.add('has-thumbnail');
         // 隐藏favicon
         const favicon = content.querySelector('.dial-favicon');
@@ -413,6 +413,30 @@ class UIManager {
   }
 
   // 加载应用程序
+  // 根据设置加载应用程序
+  async loadAppsIfEnabled() {
+    try {
+      const result = await chrome.storage.local.get('speed_dial_settings');
+      const settings = result.speed_dial_settings || {};
+
+      const appsSection = document.querySelector('.sidebar-section:first-child');
+      if (settings.showApps === false) {
+        // 隐藏应用程序区域
+        if (appsSection) {
+          appsSection.style.display = 'none';
+        }
+      } else {
+        // 显示应用程序区域
+        if (appsSection) {
+          appsSection.style.display = 'block';
+        }
+        await this.loadApps();
+      }
+    } catch (error) {
+      console.error('加载应用设置失败:', error);
+    }
+  }
+
   async loadApps() {
     try {
       const apps = await chrome.management.getAll();
@@ -904,6 +928,26 @@ class UIManager {
         sidebar.classList.remove('sidebar-left');
         sidebarToggle.style.right = '20px';
         sidebarToggle.style.left = 'auto';
+      }
+
+      // 应用显示应用程序设置
+      const appsSection = document.querySelector('.sidebar-section:first-child');
+      if (settings.showApps === false) {
+        if (appsSection) {
+          appsSection.style.display = 'none';
+        }
+        // 调整侧边栏宽度为两栏
+        if (sidebar) {
+          sidebar.style.width = '720px';
+        }
+      } else {
+        if (appsSection) {
+          appsSection.style.display = 'block';
+        }
+        // 恢复侧边栏宽度为三栏
+        if (sidebar) {
+          sidebar.style.width = '1080px';
+        }
       }
 
       // 自动打开侧边栏
