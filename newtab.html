@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新标签页</title>
+  <link rel="stylesheet" href="styles/newtab.css">
+  <link rel="stylesheet" href="styles/sidebar.css">
+</head>
+
+<body>
+  <div id="app">
+    <!-- 设置按钮 -->
+    <button id="settings-btn" class="settings-btn" title="打开设置">⚙️</button>
+
+    <!-- 快速拨号网格 -->
+    <div class="dials-container">
+      <div id="dials-grid" class="dials-grid">
+        <!-- 添加按钮 -->
+        <div class="dial-item add-dial" id="add-dial-btn">
+          <div class="dial-content">
+            <span class="add-icon">+</span>
+            <span class="add-text">添加书签</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 侧边栏切换按钮 -->
+    <button id="sidebar-toggle" class="sidebar-toggle" title="打开侧边栏">☰</button>
+
+    <!-- 侧边栏 -->
+    <div id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <button class="sidebar-close" id="sidebar-close">×</button>
+      </div>
+
+      <div class="sidebar-content">
+        <!-- 应用程序面板 -->
+        <div class="sidebar-section">
+          <h3 class="sidebar-title">应用程序</h3>
+          <div id="apps-list" class="apps-list"></div>
+        </div>
+
+        <!-- 书签面板 -->
+        <div class="sidebar-section">
+          <h3 class="sidebar-title">书签</h3>
+          <input type="text" id="bookmark-search" class="sidebar-search" placeholder="搜索书签..." />
+          <div id="bookmarks-list" class="bookmarks-list"></div>
+        </div>
+
+        <!-- 最近关闭的标签页 -->
+        <div class="sidebar-section">
+          <h3 class="sidebar-title">最近关闭的标签页</h3>
+          <div id="recent-tabs-list" class="recent-tabs-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加/编辑书签模态框 -->
+  <div id="dial-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-title">添加书签</h2>
+        <button class="modal-close" id="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="dial-url">网址 (URL)</label>
+          <input type="text" id="dial-url" placeholder="https://example.com" />
+        </div>
+        <div class="form-group">
+          <label for="dial-title">标题</label>
+          <input type="text" id="dial-title" placeholder="输入标题" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="modal-cancel" class="btn btn-secondary">取消</button>
+        <button id="modal-save" class="btn btn-primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 确认删除模态框 -->
+  <div id="confirm-modal" class="modal">
+    <div class="modal-content modal-small">
+      <div class="modal-header">
+        <h2>确认删除</h2>
+      </div>
+      <div class="modal-body">
+        <p>确定要删除这个书签吗？</p>
+      </div>
+      <div class="modal-footer">
+        <button id="confirm-cancel" class="btn btn-secondary">取消</button>
+        <button id="confirm-delete" class="btn btn-danger">删除</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="scripts/newtab.js"></script>
+</body>
+
+</html>

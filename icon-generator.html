@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>图标生成器 - Speed Dial</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      color: #4285f4;
+      margin-bottom: 20px;
+    }
+
+    .preview {
+      display: flex;
+      gap: 20px;
+      margin: 30px 0;
+      flex-wrap: wrap;
+    }
+
+    .icon-box {
+      text-align: center;
+    }
+
+    canvas {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      background: #4285f4;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+    }
+
+    button:hover {
+      background: #3367d6;
+    }
+
+    .info {
+      background: #e8f0fe;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      color: #1967d2;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>⚡ Speed Dial 图标生成器</h1>
+    <p>这个工具可以为 Speed Dial 扩展生成所需的图标文件。</p>
+
+    <div class="preview" id="preview"></div>
+
+    <div>
+      <button onclick="generateIcons()">生成图标</button>
+      <button onclick="downloadAll()">下载全部</button>
+    </div>
+
+    <div class="info">
+      <strong>说明：</strong><br>
+      1. 点击"生成图标"按钮生成图标预览<br>
+      2. 点击"下载全部"按钮下载所有尺寸的图标<br>
+      3. 将下载的图标文件放入 icons 文件夹<br>
+      4. 重新加载扩展即可
+    </div>
+  </div>
+
+  <script>
+    const sizes = [16, 32, 48, 128];
+    const canvases = {};
+
+    function drawIcon(canvas, size) {
+      const ctx = canvas.getContext('2d');
+      const scale = size / 128;
+
+      // 清空画布
+      ctx.clearRect(0, 0, size, size);
+
+      // 背景
+      ctx.fillStyle = '#4285f4';
+      const radius = 24 * scale;
+      roundRect(ctx, 0, 0, size, size, radius);
+      ctx.fill();
+
+      // 中心圆圈（代表快速拨号）
+      ctx.fillStyle = 'white';
+      ctx.beginPath();
+      ctx.arc(size / 2, size * 0.375, 28 * scale, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 底部线条（代表文字）
+      const lineY = size * 0.625;
+      const lineWidth1 = 56 * scale;
+      const lineWidth2 = 40 * scale;
+      const lineWidth3 = 24 * scale;
+      const lineHeight = 8 * scale;
+      const lineRadius = 4 * scale;
+
+      // 第一行
+      ctx.fillStyle = 'white';
+      roundRect(ctx, (size - lineWidth1) / 2, lineY, lineWidth1, lineHeight, lineRadius);
+      ctx.fill();
+
+      // 第二行
+      roundRect(ctx, (size - lineWidth2) / 2, lineY + 14 * scale, lineWidth2, lineHeight, lineRadius);
+      ctx.fill();
+
+      // 第三行
+      roundRect(ctx, (size - lineWidth3) / 2, lineY + 28 * scale, lineWidth3, lineHeight, lineRadius);
+      ctx.fill();
+    }
+
+    function roundRect(ctx, x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    }
+
+    function generateIcons() {
+      const preview = document.getElementById('preview');
+      preview.innerHTML = '';
+
+      sizes.forEach(size => {
+        const box = document.createElement('div');
+        box.className = 'icon-box';
+
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        canvas.style.width = size + 'px';
+        canvas.style.height = size + 'px';
+
+        drawIcon(canvas, size);
+        canvases[size] = canvas;
+
+        const label = document.createElement('div');
+        label.textContent = `${size}x${size}`;
+
+        const downloadBtn = document.createElement('button');
+        downloadBtn.textContent = '下载';
+        downloadBtn.style.fontSize = '12px';
+        downloadBtn.style.padding = '6px 12px';
+        downloadBtn.onclick = () => downloadIcon(size);
+
+        box.appendChild(canvas);
+        box.appendChild(label);
+        box.appendChild(downloadBtn);
+        preview.appendChild(box);
+      });
+    }
+
+    function downloadIcon(size) {
+      const canvas = canvases[size];
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `icon${size}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    }
+
+    function downloadAll() {
+      if (Object.keys(canvases).length === 0) {
+        alert('请先生成图标！');
+        return;
+      }
+
+      sizes.forEach((size, index) => {
+        setTimeout(() => downloadIcon(size), index * 200);
+      });
+    }
+
+    // 页面加载时自动生成
+    window.onload = generateIcons;
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Speed Dial 设置</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary-color: #4285f4;
+      --secondary-color: #34a853;
+      --danger-color: #ea4335;
+      --bg-color: #f5f5f5;
+      --card-bg: #ffffff;
+      --text-color: #202124;
+      --text-secondary: #5f6368;
+      --border-color: #dadce0;
+      --hover-bg: #f1f3f4;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+      color: var(--text-color);
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 16px;
+    }
+
+    .settings-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 30px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .settings-section {
+      margin-bottom: 32px;
+    }
+
+    .settings-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .setting-item {
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .setting-item:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .setting-label {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: var(--text-color);
+    }
+
+    .setting-description {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    .setting-control {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    select,
+    input[type="text"],
+    input[type="number"],
+    input[type="color"] {
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.3s ease;
+    }
+
+    select {
+      min-width: 200px;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      flex: 1;
+      max-width: 400px;
+    }
+
+    select:focus,
+    input[type="text"]:focus,
+    input[type="number"]:focus {
+      border-color: var(--primary-color);
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 28px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--border-color);
+      transition: 0.4s;
+      border-radius: 28px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: 0.4s;
+      border-radius: 50%;
+    }
+
+    input:checked+.slider {
+      background-color: var(--primary-color);
+    }
+
+    input:checked+.slider:before {
+      transform: translateX(22px);
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-right: 12px;
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: #3367d6;
+    }
+
+    .btn-secondary {
+      background-color: transparent;
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+      background-color: var(--hover-bg);
+    }
+
+    .btn-danger {
+      background-color: var(--danger-color);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background-color: #d33828;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 10000;
+      opacity: 0;
+      transform: translateX(400px);
+      transition: all 0.3s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .toast.success {
+      border-left: 4px solid var(--secondary-color);
+    }
+
+    .toast.error {
+      border-left: 4px solid var(--danger-color);
+    }
+
+    .file-input-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    .file-input-wrapper input[type="file"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: 'Courier New', monospace;
+      outline: none;
+      resize: vertical;
+    }
+
+    textarea:focus {
+      border-color: var(--primary-color);
+    }
+
+    .preset-bg {
+      width: 80px;
+      height: 60px;
+      border-radius: 6px;
+      border: 2px solid var(--border-color);
+      cursor: pointer;
+      background-size: cover;
+      background-position: center;
+      transition: all 0.3s ease;
+    }
+
+    .preset-bg:hover {
+      border-color: var(--primary-color);
+      transform: scale(1.05);
+    }
+
+    .preset-bg.selected {
+      border-color: var(--primary-color);
+      border-width: 3px;
+      box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--border-color);
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      cursor: pointer;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      cursor: pointer;
+      border: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>⚙️ Speed Dial 设置</h1>
+      <p class="subtitle">自定义您的新标签页体验</p>
+    </header>
+
+    <div class="settings-card">
+      <div class="settings-section">
+        <h2 class="section-title">🎨 外观设置</h2>
+
+        <div class="setting-item">
+          <div class="setting-label">主题</div>
+          <div class="setting-description">选择浅色或深色主题</div>
+          <div class="setting-control">
+            <select id="theme">
+              <option value="light">浅色</option>
+              <option value="dark">深色</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">列数</div>
+          <div class="setting-description">设置快速拨号网格的列数</div>
+          <div class="setting-control">
+            <select id="columns">
+              <option value="auto">自动</option>
+              <option value="3">3 列</option>
+              <option value="4">4 列</option>
+              <option value="5">5 列</option>
+              <option value="6">6 列</option>
+              <option value="8">8 列</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">背景颜色</div>
+          <div class="setting-description">自定义背景颜色</div>
+          <div class="setting-control">
+            <input type="color" id="backgroundColor" />
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">背景图片</div>
+          <div class="setting-description">上传自定义背景图片或选择预设图片</div>
+          <div class="setting-control" style="flex-direction: column; align-items: flex-start; gap: 12px;">
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <div class="file-input-wrapper">
+                <button class="btn btn-secondary" id="uploadButton">上传图片</button>
+                <input type="file" id="backgroundImage" accept="image/*">
+              </div>
+              <button class="btn btn-secondary" id="removeBackground">移除背景</button>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <div class="preset-bg" data-url="https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=1920"
+                style="background-image: url('https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=400&h=300&fit=crop')"
+                title="渐变色"></div>
+              <div class="preset-bg" data-url="https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1920"
+                style="background-image: url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&h=300&fit=crop')"
+                title="渐变蓝"></div>
+              <div class="preset-bg" data-url="https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=1920"
+                style="background-image: url('https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=400&h=300&fit=crop')"
+                title="紫色渐变"></div>
+              <div class="preset-bg" data-url="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920"
+                style="background-image: url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop')"
+                title="山景"></div>
+              <div class="preset-bg" data-url="https://images.unsplash.com/photo-1511593358241-7eea1f3c84e5?w=1920"
+                style="background-image: url('https://images.unsplash.com/photo-1511593358241-7eea1f3c84e5?w=400&h=300&fit=crop')"
+                title="星空"></div>
+            </div>
+            <div id="currentBackground"
+              style="display: none; width: 200px; height: 120px; border-radius: 8px; background-size: cover; background-position: center; border: 2px solid var(--border-color);">
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">背景样式</div>
+          <div class="setting-description">设置背景图片的显示方式</div>
+          <div class="setting-control">
+            <select id="backgroundStyle">
+              <option value="cover">覆盖 (Cover)</option>
+              <option value="contain">包含 (Contain)</option>
+              <option value="repeat">平铺 (Repeat)</option>
+              <option value="center">居中 (Center)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">背景不透明度</div>
+          <div class="setting-description">调整背景图片的透明度 (0-100%)</div>
+          <div class="setting-control">
+            <input type="range" id="backgroundOpacity" min="0" max="100" value="100" style="flex: 1; max-width: 300px;">
+            <span id="opacityValue" style="min-width: 50px;">100%</span>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">字体大小</div>
+          <div class="setting-description">调整文字大小</div>
+          <div class="setting-control">
+            <select id="fontSize">
+              <option value="small">小</option>
+              <option value="medium">中</option>
+              <option value="large">大</option>
+              <option value="xlarge">特大</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">显示标题</div>
+          <div class="setting-description">在快速拨号图标下显示标题</div>
+          <div class="setting-control">
+            <label class="switch">
+              <input type="checkbox" id="showTitles" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">显示图标</div>
+          <div class="setting-description">显示网站图标</div>
+          <div class="setting-control">
+            <label class="switch">
+              <input type="checkbox" id="showFavicons" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h2 class="section-title">⚡ 功能设置</h2>
+
+        <div class="setting-item">
+          <div class="setting-label">侧边栏位置</div>
+          <div class="setting-description">设置侧边栏出现的位置</div>
+          <div class="setting-control">
+            <select id="sidebarPosition">
+              <option value="right">右侧</option>
+              <option value="left">左侧</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">自动打开侧边栏</div>
+          <div class="setting-description">页面加载时自动打开侧边栏</div>
+          <div class="setting-control">
+            <label class="switch">
+              <input type="checkbox" id="autoOpenSidebar">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">最近标签页数量</div>
+          <div class="setting-description">显示的最近关闭标签页数量</div>
+          <div class="setting-control">
+            <input type="number" id="maxRecentTabs" min="5" max="50" value="10">
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">启用动画</div>
+          <div class="setting-description">启用界面动画效果</div>
+          <div class="setting-control">
+            <label class="switch">
+              <input type="checkbox" id="enableAnimations" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h2 class="section-title">🔧 高级设置</h2>
+
+        <div class="setting-item">
+          <div class="setting-label">自定义 CSS</div>
+          <div class="setting-description">添加自定义样式（高级用户）</div>
+          <textarea id="customCSS" placeholder="/* 在此输入自定义 CSS */"></textarea>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h2 class="section-title">💾 数据管理</h2>
+
+        <div class="setting-item">
+          <div class="setting-label">导出数据</div>
+          <div class="setting-description">导出所有书签和设置</div>
+          <div class="setting-control">
+            <button class="btn btn-secondary" id="exportData">导出数据</button>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">导入数据</div>
+          <div class="setting-description">从备份文件导入数据</div>
+          <div class="setting-control">
+            <div class="file-input-wrapper">
+              <button class="btn btn-secondary">选择文件</button>
+              <input type="file" id="importData" accept=".json">
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">重置设置</div>
+          <div class="setting-description">恢复默认设置（不影响书签）</div>
+          <div class="setting-control">
+            <button class="btn btn-danger" id="resetSettings">重置设置</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="saveSettings">保存设置</button>
+      <button class="btn btn-secondary" id="cancelSettings">取消</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="scripts/options.js"></script>
+</body>
+
+</html>
