@@ -53,6 +53,46 @@ class DataManager {
       return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect fill="%23ccc" width="48" height="48"/></svg>';
     }
   }
+
+  // 获取缩略图
+  async getThumbnail(url) {
+    try {
+      const key = `thumbnail_${url}`;
+      const result = await chrome.storage.local.get(key);
+      return result[key] || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // 保存缩略图
+  async saveThumbnail(url, thumbnail) {
+    try {
+      const key = `thumbnail_${url}`;
+      await chrome.storage.local.set({ [key]: thumbnail });
+      return true;
+    } catch (e) {
+      console.error('保存缩略图失败:', e);
+      return false;
+    }
+  }
+
+  // 截取网页缩略图
+  async captureThumbnail(url) {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        { action: 'captureTab', url: url },
+        (response) => {
+          if (response && response.success) {
+            resolve(response.thumbnail);
+          } else {
+            console.error('截图失败:', response?.error);
+            resolve(null);
+          }
+        }
+      );
+    });
+  }
 }
 
 // UI管理器
@@ -108,6 +148,11 @@ class UIManager {
       this.confirmDelete();
     });
 
+    // 重新截取缩略图按钮
+    document.getElementById('capture-thumbnail-btn').addEventListener('click', () => {
+      this.captureThumbnailForCurrentBookmark();
+    });
+
     // 书签搜索
     document.getElementById('bookmark-search').addEventListener('input', (e) => {
       this.searchBookmarks(e.target.value);
@@ -158,6 +203,21 @@ class UIManager {
     item.dataset.id = bookmark.id;
     item.draggable = true; // 使元素可拖拽
 
+    // 异步加载缩略图
+    this.dataManager.getThumbnail(bookmark.url).then(thumbnail => {
+      const content = item.querySelector('.dial-content');
+      if (thumbnail && content) {
+        // 如果有缩略图，显示缩略图作为背景
+        content.style.backgroundImage = `url(${thumbnail})`;
+        content.style.backgroundSize = 'contain';
+        content.style.backgroundPosition = 'center';
+        content.classList.add('has-thumbnail');
+        // 隐藏favicon
+        const favicon = content.querySelector('.dial-favicon');
+        if (favicon) favicon.style.display = 'none';
+      }
+    });
+
     const faviconUrl = this.dataManager.getFaviconUrl(bookmark.url);
 
     item.innerHTML = `
@@ -199,15 +259,6 @@ class UIManager {
     return item;
   }
 
-  // 打开添加模态框
-  openAddModal() {
-    this.currentEditingId = null;
-    document.getElementById('modal-title').textContent = '添加书签';
-    document.getElementById('dial-url').value = '';
-    document.getElementById('dial-title').value = '';
-    this.openModal('dial-modal');
-  }
-
   // 打开编辑模态框
   async openEditModal(id) {
     this.currentEditingId = id;
@@ -218,7 +269,68 @@ class UIManager {
       document.getElementById('modal-title').textContent = '编辑书签';
       document.getElementById('dial-url').value = bookmark.url;
       document.getElementById('dial-title').value = bookmark.title;
+      // 显示重新截图按钮
+      document.getElementById('capture-thumbnail-group').style.display = 'block';
       this.openModal('dial-modal');
+    }
+  }
+
+  // 打开添加模态框
+  openAddModal() {
+    this.currentEditingId = null;
+    document.getElementById('modal-title').textContent = '添加书签';
+    document.getElementById('dial-url').value = '';
+    document.getElementById('dial-title').value = '';
+    // 隐藏重新截图按钮
+    document.getElementById('capture-thumbnail-group').style.display = 'none';
+    this.openModal('dial-modal');
+  }
+
+  // 为当前编辑的书签重新截图
+  async captureThumbnailForCurrentBookmark() {
+    const url = document.getElementById('dial-url').value.trim();
+
+    if (!url) {
+      alert('请先输入网址');
+      return;
+    }
+
+    // 确保URL格式正确
+    let formattedUrl = url;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      formattedUrl = 'https://' + url;
+    }
+
+    try {
+      new URL(formattedUrl);
+    } catch (e) {
+      alert('请输入有效的网址');
+      return;
+    }
+
+    // 禁用按钮并显示加载状态
+    const btn = document.getElementById('capture-thumbnail-btn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ 正在截图...';
+
+    try {
+      const thumbnail = await this.dataManager.captureThumbnail(formattedUrl);
+      if (thumbnail) {
+        await this.dataManager.saveThumbnail(formattedUrl, thumbnail);
+        btn.textContent = '✅ 截图完成！';
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.disabled = false;
+        }, 2000);
+      } else {
+        throw new Error('截图失败');
+      }
+    } catch (err) {
+      console.error('截图失败:', err);
+      alert('截图失败，请稍后重试');
+      btn.textContent = originalText;
+      btn.disabled = false;
     }
   }
 
@@ -253,9 +365,22 @@ class UIManager {
       });
     } else {
       // 添加
-      await this.dataManager.addBookmark({
+      const bookmark = await this.dataManager.addBookmark({
         url: formattedUrl,
         title: title
+      });
+
+      // 异步截取缩略图（不阻塞UI）
+      this.dataManager.captureThumbnail(formattedUrl).then(thumbnail => {
+        if (thumbnail) {
+          this.dataManager.saveThumbnail(formattedUrl, thumbnail).then(() => {
+            console.log('缩略图已保存:', formattedUrl);
+            // 重新加载以显示缩略图
+            this.loadDials();
+          });
+        }
+      }).catch(err => {
+        console.error('截图失败:', err);
       });
     }
 

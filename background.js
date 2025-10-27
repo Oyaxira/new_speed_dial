@@ -74,6 +74,109 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true;
   }
+
+  // 截取当前标签页缩略图
+  if (request.action === 'captureThumbnail') {
+    chrome.tabs.captureVisibleTab(null, { format: 'jpeg', quality: 80 }, (dataUrl) => {
+      if (chrome.runtime.lastError) {
+        console.error('截图失败:', chrome.runtime.lastError);
+        sendResponse({ success: false, error: chrome.runtime.lastError.message });
+        return;
+      }
+
+      // 压缩图片
+      createImageBitmap(dataUrl).then(imageBitmap => {
+        const canvas = new OffscreenCanvas(460, Math.ceil(460 / imageBitmap.width * imageBitmap.height));
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(imageBitmap, 0, 0, canvas.width, canvas.height);
+
+        canvas.convertToBlob({ type: 'image/jpeg', quality: 0.75 }).then(blob => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            sendResponse({ success: true, thumbnail: reader.result });
+          };
+          reader.readAsDataURL(blob);
+        });
+      }).catch(err => {
+        // 如果createImageBitmap失败，直接返回原图
+        sendResponse({ success: true, thumbnail: dataUrl });
+      });
+    });
+    return true;
+  }
+
+  // 打开新标签页并截图
+  if (request.action === 'captureTab') {
+    // 创建一个激活的标签页，这样才能截图
+    chrome.tabs.create({ url: request.url, active: true }, (tab) => {
+      const tabId = tab.id;
+      const windowId = tab.windowId;
+
+      const listener = (updatedTabId, changeInfo) => {
+        if (updatedTabId === tabId && changeInfo.status === 'complete') {
+          chrome.tabs.onUpdated.removeListener(listener);
+
+          // 等待页面渲染
+          setTimeout(() => {
+            chrome.tabs.captureVisibleTab(windowId, { format: 'jpeg', quality: 80 }, async (dataUrl) => {
+              if (chrome.runtime.lastError) {
+                console.error('截图失败:', chrome.runtime.lastError);
+                chrome.tabs.remove(tabId).catch(() => {});
+                sendResponse({ success: false, error: chrome.runtime.lastError.message });
+                return;
+              }
+
+              try {
+                // 使用 fetch 和 createImageBitmap 来处理图片（Service Worker 兼容）
+                const response = await fetch(dataUrl);
+                const blob = await response.blob();
+                const imageBitmap = await createImageBitmap(blob);
+
+                // 计算缩放后的尺寸（提高分辨率到920px）
+                const targetWidth = 920;
+                const targetHeight = Math.ceil(targetWidth / imageBitmap.width * imageBitmap.height);
+
+                // 使用 OffscreenCanvas 压缩图片
+                const canvas = new OffscreenCanvas(targetWidth, targetHeight);
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(imageBitmap, 0, 0, targetWidth, targetHeight);
+
+                // 转换为 Blob 然后转为 Data URL（提高质量到85%）
+                const compressedBlob = await canvas.convertToBlob({
+                  type: 'image/jpeg',
+                  quality: 1
+                });
+
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  // 截图完成后关闭标签页
+                  chrome.tabs.remove(tabId).catch(() => {});
+                  sendResponse({ success: true, thumbnail: reader.result });
+                };
+                reader.readAsDataURL(compressedBlob);
+
+              } catch (err) {
+                console.error('图片压缩失败:', err);
+                // 如果压缩失败，直接返回原始截图
+                chrome.tabs.remove(tabId).catch(() => {});
+                sendResponse({ success: true, thumbnail: dataUrl });
+              }
+            });
+          }, 1500);
+        }
+      };
+
+      chrome.tabs.onUpdated.addListener(listener);
+
+      // 15秒超时
+      setTimeout(() => {
+        chrome.tabs.onUpdated.removeListener(listener);
+        chrome.tabs.remove(tabId).catch(() => {});
+        sendResponse({ success: false, error: '截图超时' });
+      }, 15000);
+    });
+    return true;
+  }
 });
 
 // 命令监听（可以添加键盘快捷键）
