@@ -15,6 +15,8 @@
   --border-color: #dadce0;
   --hover-bg: #f1f3f4;
   --sidebar-width: 320px;
+  --favicon-display: block;
+  --title-display: block;
 }
 
 body {
@@ -83,6 +85,18 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+/* 拖拽状态样式 */
+.dial-item.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  cursor: move;
+}
+
+.dial-item:not(.dragging) {
+  transition: transform 0.2s ease;
+}
+
 .dial-content {
   display: flex;
   flex-direction: column;
@@ -98,6 +112,7 @@ body {
   height: 48px;
   margin-bottom: 12px;
   border-radius: 8px;
+  display: var(--favicon-display);
 }
 
 .dial-title {
@@ -106,10 +121,15 @@ body {
   color: var(--text-color);
   overflow: hidden;
   text-overflow: ellipsis;
-  display: -webkit-box;
+  display: var(--title-display);
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   word-break: break-word;
+}
+
+.dial-title[style*="display: block"],
+.dial-title[style*="display: -webkit-box"] {
+  display: -webkit-box !important;
 }
 
 /* 添加按钮 */
@@ -198,24 +218,6 @@ body {
 .sidebar-toggle:hover {
   transform: scale(1.1);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-}
-
-/* 侧边栏 */
-.sidebar {
-  position: fixed;
-  right: -var(--sidebar-width);
-  top: 0;
-  width: var(--sidebar-width);
-  height: 100vh;
-  background: var(--card-bg);
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
-  transition: right 0.3s ease;
-  z-index: 1000;
-  overflow-y: auto;
-}
-
-.sidebar.open {
-  right: 0;
 }
 
 .sidebar-header {

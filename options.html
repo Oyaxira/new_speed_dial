@@ -258,6 +258,37 @@
       border-left: 4px solid var(--danger-color);
     }
 
+    /* 关闭按钮 */
+    .close-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 12px;
+      border-radius: 50%;
+      transition: all 0.3s ease;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-color);
+      line-height: 1;
+    }
+
+    .close-btn:hover {
+      background: rgba(255, 255, 255, 1);
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      color: var(--danger-color);
+    }
+
     .file-input-wrapper {
       position: relative;
       display: inline-block;
@@ -339,6 +370,9 @@
 </head>
 
 <body>
+  <!-- 关闭按钮 -->
+  <button class="close-btn" id="closeSettings" title="关闭设置">×</button>
+
   <div class="container">
     <header>
       <h1>⚙️ Speed Dial 设置</h1>
@@ -504,7 +538,7 @@
           <div class="setting-label">最近标签页数量</div>
           <div class="setting-description">显示的最近关闭标签页数量</div>
           <div class="setting-control">
-            <input type="number" id="maxRecentTabs" min="5" max="50" value="10">
+            <input type="number" id="maxRecentTabs" min="5" max="100" value="20">
           </div>
         </div>
 

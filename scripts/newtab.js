@@ -113,6 +113,11 @@ class UIManager {
       this.searchBookmarks(e.target.value);
     });
 
+    // 最近标签页搜索
+    document.getElementById('recent-tabs-search').addEventListener('input', (e) => {
+      this.loadRecentTabs(e.target.value);
+    });
+
     // 设置按钮
     document.getElementById('settings-btn').addEventListener('click', () => {
       chrome.runtime.openOptionsPage();
@@ -136,19 +141,22 @@ class UIManager {
     // 清空现有项（除了添加按钮）
     const addBtn = document.getElementById('add-dial-btn');
     grid.innerHTML = '';
-    grid.appendChild(addBtn);
 
-    // 添加书签项
+    // 先添加书签项（保持存储的顺序）
     bookmarks.forEach(bookmark => {
       const dialItem = this.createDialItem(bookmark);
       grid.appendChild(dialItem);
     });
+
+    // 最后添加"添加书签"按钮
+    grid.appendChild(addBtn);
   }
 
   createDialItem(bookmark) {
     const item = document.createElement('div');
     item.className = 'dial-item';
     item.dataset.id = bookmark.id;
+    item.draggable = true; // 使元素可拖拽
 
     const faviconUrl = this.dataManager.getFaviconUrl(bookmark.url);
 
@@ -162,6 +170,12 @@ class UIManager {
         </div>
       </div>
     `;
+
+    // 拖拽事件
+    item.addEventListener('dragstart', (e) => this.handleDragStart(e));
+    item.addEventListener('dragover', (e) => this.handleDragOver(e));
+    item.addEventListener('drop', (e) => this.handleDrop(e));
+    item.addEventListener('dragend', (e) => this.handleDragEnd(e));
 
     // 点击打开链接
     item.addEventListener('click', (e) => {
@@ -319,23 +333,47 @@ class UIManager {
   }
 
   // 加载最近关闭的标签页
-  async loadRecentTabs() {
+  async loadRecentTabs(searchQuery = '') {
     try {
-      const sessions = await chrome.sessions.getRecentlyClosed({ maxResults: 10 });
       const recentTabsList = document.getElementById('recent-tabs-list');
       recentTabsList.innerHTML = '';
 
-      const tabs = sessions.filter(session => session.tab);
+      // 如果有搜索词，从历史记录中搜索
+      if (searchQuery.trim()) {
+        const historyItems = await chrome.history.search({
+          text: searchQuery,
+          maxResults: 50,
+          startTime: 0
+        });
 
-      if (tabs.length === 0) {
-        recentTabsList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); font-size: 14px;">暂无最近关闭的标签页</p>';
-        return;
+        if (historyItems.length === 0) {
+          recentTabsList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); font-size: 14px;">未找到匹配的历史记录</p>';
+          return;
+        }
+
+        historyItems.forEach(item => {
+          const tabItem = this.createHistoryItem(item);
+          recentTabsList.appendChild(tabItem);
+        });
+      } else {
+        // 没有搜索词，显示最近关闭的标签页
+        const result = await chrome.storage.local.get('speed_dial_settings');
+        const settings = result.speed_dial_settings || {};
+        const maxResults = settings.maxRecentTabs || 20;
+
+        const sessions = await chrome.sessions.getRecentlyClosed({ maxResults: maxResults });
+        const tabs = sessions.filter(session => session.tab);
+
+        if (tabs.length === 0) {
+          recentTabsList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); font-size: 14px;">暂无最近关闭的标签页</p>';
+          return;
+        }
+
+        tabs.forEach(session => {
+          const tabItem = this.createRecentTabItem(session);
+          recentTabsList.appendChild(tabItem);
+        });
       }
-
-      tabs.forEach(session => {
-        const tabItem = this.createRecentTabItem(session);
-        recentTabsList.appendChild(tabItem);
-      });
     } catch (error) {
       console.error('加载最近标签页失败:', error);
       document.getElementById('recent-tabs-list').innerHTML = '<p style="text-align: center; color: var(--text-secondary); font-size: 14px;">无法加载标签页</p>';
@@ -366,6 +404,31 @@ class UIManager {
         chrome.sessions.restore(session.tab.sessionId);
       } else if (tab.url) {
         window.open(tab.url, '_blank');
+      }
+    });
+
+    return item;
+  }
+
+  // 创建历史记录项
+  createHistoryItem(historyItem) {
+    const item = document.createElement('div');
+    item.className = 'recent-tab-item';
+
+    const faviconUrl = this.dataManager.getFaviconUrl(historyItem.url || '');
+    const timeAgo = this.getTimeAgo(historyItem.lastVisitTime);
+
+    item.innerHTML = `
+      <img src="${faviconUrl}" alt="" class="recent-tab-favicon" onerror="this.style.display='none'">
+      <div class="recent-tab-info">
+        <div class="recent-tab-title">${this.escapeHtml(historyItem.title || historyItem.url || 'Untitled')}</div>
+        <div class="recent-tab-time">${timeAgo}</div>
+      </div>
+    `;
+
+    item.addEventListener('click', () => {
+      if (historyItem.url) {
+        window.open(historyItem.url, '_blank');
       }
     });
 
@@ -532,6 +595,83 @@ class UIManager {
     return div.innerHTML;
   }
 
+  // 拖拽处理方法
+  handleDragStart(e) {
+    e.target.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', e.target.innerHTML);
+    this.draggedElement = e.target;
+  }
+
+  handleDragOver(e) {
+    if (e.preventDefault) {
+      e.preventDefault();
+    }
+    e.dataTransfer.dropEffect = 'move';
+
+    const target = e.target.closest('.dial-item');
+    if (target && target !== this.draggedElement) {
+      const container = document.getElementById('dials-grid');
+      const afterElement = this.getDragAfterElement(container, e.clientX, e.clientY);
+
+      if (afterElement == null) {
+        container.appendChild(this.draggedElement);
+      } else {
+        container.insertBefore(this.draggedElement, afterElement);
+      }
+    }
+    return false;
+  }
+
+  handleDrop(e) {
+    if (e.stopPropagation) {
+      e.stopPropagation();
+    }
+    return false;
+  }
+
+  handleDragEnd(e) {
+    e.target.classList.remove('dragging');
+    this.saveBookmarkOrder();
+  }
+
+  getDragAfterElement(container, x, y) {
+    const draggableElements = [...container.querySelectorAll('.dial-item:not(.dragging)')];
+
+    return draggableElements.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = x - box.left - box.width / 2;
+
+      if (offset < 0 && offset > closest.offset) {
+        return { offset: offset, element: child };
+      } else {
+        return closest;
+      }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+  }
+
+  async saveBookmarkOrder() {
+    const items = document.querySelectorAll('.dial-item:not(.add-dial)');
+    const bookmarks = await this.dataManager.getBookmarks();
+    const newOrder = [];
+
+    items.forEach((item) => {
+      const id = item.dataset.id; // 保持字符串类型
+      const bookmark = bookmarks.find(b => b.id === id);
+      if (bookmark) {
+        newOrder.push(bookmark);
+      }
+    });
+
+    // 确保新顺序包含所有书签
+    if (newOrder.length === bookmarks.length) {
+      await this.dataManager.saveBookmarks(newOrder);
+      console.log('书签顺序已保存:', newOrder.map(b => b.title));
+    } else {
+      console.error('书签数量不匹配，取消保存');
+    }
+  }
+
   // 应用设置
   async applySettings() {
     try {
@@ -609,6 +749,43 @@ class UIManager {
           xlarge: '18px'
         };
         document.documentElement.style.fontSize = fontSizeMap[settings.fontSize] || '14px';
+      }
+
+      // 应用显示图标设置
+      if (settings.showFavicons === false) {
+        document.documentElement.style.setProperty('--favicon-display', 'none');
+      } else {
+        document.documentElement.style.setProperty('--favicon-display', 'block');
+      }
+
+      // 应用显示标题设置
+      if (settings.showTitles === false) {
+        document.documentElement.style.setProperty('--title-display', 'none');
+      } else {
+        document.documentElement.style.setProperty('--title-display', 'block');
+      }
+
+      // 应用侧边栏位置
+      const sidebar = document.getElementById('sidebar');
+      const sidebarToggle = document.getElementById('sidebar-toggle');
+
+      if (settings.sidebarPosition === 'left') {
+        sidebar.classList.add('sidebar-left');
+        sidebar.classList.remove('sidebar-right');
+        sidebarToggle.style.left = '20px';
+        sidebarToggle.style.right = 'auto';
+      } else {
+        sidebar.classList.add('sidebar-right');
+        sidebar.classList.remove('sidebar-left');
+        sidebarToggle.style.right = '20px';
+        sidebarToggle.style.left = 'auto';
+      }
+
+      // 自动打开侧边栏
+      if (settings.autoOpenSidebar) {
+        setTimeout(() => {
+          sidebar.classList.add('open');
+        }, 300);
       }
 
     } catch (error) {

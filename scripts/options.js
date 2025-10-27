@@ -16,7 +16,7 @@ const defaultSettings = {
   fontSize: 'medium',
   sidebarPosition: 'right',
   autoOpenSidebar: false,
-  maxRecentTabs: 10,
+  maxRecentTabs: 20,
   showFavicons: true,
   enableAnimations: true,
   customCSS: ''
@@ -166,6 +166,15 @@ function showToast(message, type = 'success') {
 // 事件监听
 document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
+
+  // 关闭设置页面
+  document.getElementById('closeSettings').addEventListener('click', () => {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.close();
+    }
+  });
 
   // 保存设置
   document.getElementById('saveSettings').addEventListener('click', saveSettings);
