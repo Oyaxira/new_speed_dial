@@ -1,0 +1,516 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --favicon-display: block;
+    --title-display: -webkit-box;
+  }
+
+  html {
+    @apply h-full;
+  }
+
+  body {
+    @apply min-h-screen font-sans antialiased bg-surfaceMuted text-slate-900 overflow-x-hidden;
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+  }
+
+  button {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-transparent;
+  }
+}
+
+@layer components {
+  /* 通用按钮 */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white shadow-sm hover:bg-primary/90 hover:shadow-md;
+  }
+
+  .btn-secondary {
+    @apply border border-slate-300 bg-white/90 text-slate-700 hover:bg-white shadow-sm;
+  }
+
+  .btn-danger {
+    @apply bg-danger text-white shadow-sm hover:bg-danger/90;
+  }
+
+  /* 新标签页主界面 */
+  .settings-btn {
+    @apply fixed top-6 right-6 z-[100] flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-2xl shadow-lg backdrop-blur transition-transform duration-200 hover:scale-110 hover:bg-white hover:shadow-xl;
+  }
+
+  .dials-container {
+    @apply mx-auto w-full max-w-7xl px-5 pt-24 pb-6 md:px-10;
+  }
+
+  .dials-grid {
+    @apply grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5;
+  }
+
+  .dial-item {
+    @apply relative flex aspect-video flex-col overflow-hidden rounded-2xl bg-white/90 shadow-card backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl;
+  }
+
+  .dial-item.dragging {
+    @apply scale-95 opacity-50 shadow-xl;
+  }
+
+  .dial-content {
+    @apply relative flex h-full flex-col items-center justify-center gap-3 p-6 text-center transition-all duration-300;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  .dial-content.has-thumbnail {
+    @apply justify-end p-0;
+  }
+
+  .dial-content.has-thumbnail::after {
+    content: '';
+    @apply pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent opacity-100 transition-opacity;
+  }
+
+  .dial-content.has-thumbnail .dial-title {
+    @apply relative z-[1] w-full px-4 pb-4 pt-8 text-left text-base font-medium leading-snug text-white;
+    text-shadow: 0 8px 20px rgba(15, 23, 42, 0.6), 0 3px 8px rgba(15, 23, 42, 0.45);
+  }
+
+  .dial-favicon {
+    display: var(--favicon-display);
+    @apply h-14 w-14 rounded-xl object-cover shadow-md;
+  }
+
+  .dial-title {
+    display: var(--title-display);
+    @apply max-w-full overflow-hidden text-sm font-medium text-slate-900;
+    text-overflow: ellipsis;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .add-dial {
+    @apply border-2 border-dashed border-slate-300 bg-white/70 backdrop-blur-md transition-all duration-200 hover:border-primary hover:bg-white;
+  }
+
+  .add-icon {
+    @apply text-4xl font-light text-slate-400;
+  }
+
+  .add-text {
+    @apply text-sm text-slate-500;
+  }
+
+  .dial-actions {
+    @apply absolute right-3 top-3 hidden items-center gap-2;
+  }
+
+  .dial-item:hover .dial-actions {
+    @apply flex;
+  }
+
+  .dial-action-btn {
+    @apply flex h-9 w-9 items-center justify-center rounded-full border border-white/60 bg-white/80 text-base text-slate-600 shadow-sm backdrop-blur transition hover:scale-110;
+  }
+
+  .dial-action-btn.edit {
+    @apply text-primary;
+  }
+
+  .dial-action-btn.delete {
+    @apply text-danger;
+  }
+
+  .sidebar-toggle {
+    @apply fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-2xl text-white shadow-xl transition hover:scale-110 hover:shadow-2xl;
+  }
+
+  .sidebar,
+  .sidebar.sidebar-right {
+    @apply fixed top-0 z-[1000] flex h-screen w-[1080px] -right-[1080px] flex-col overflow-hidden border-l border-slate-200 bg-white/95 backdrop-blur-xl shadow-[0_20px_60px_rgba(15,23,42,0.25)] transition-all duration-300;
+  }
+
+  .sidebar.sidebar-right.open {
+    @apply right-0;
+  }
+
+  .sidebar.sidebar-left {
+    @apply left-[-1080px] right-auto border-l-0 border-r border-slate-200 shadow-[-20px_0_60px_rgba(15,23,42,0.18)];
+  }
+
+  .sidebar.sidebar-left.open {
+    @apply left-0;
+  }
+
+  .sidebar-header {
+    @apply flex items-center justify-end border-b border-slate-200 bg-white/95 px-6 py-4;
+  }
+
+  .sidebar-close {
+    @apply flex h-10 w-10 items-center justify-center rounded-xl text-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700;
+  }
+
+  .sidebar-content {
+    @apply grid h-full flex-1 grid-cols-3 overflow-hidden;
+  }
+
+  .sidebar-section {
+    @apply flex h-full flex-col border-r border-slate-200 bg-white/90;
+  }
+
+  .sidebar-section:last-child {
+    @apply border-r-0;
+  }
+
+  .sidebar-title {
+    @apply border-b border-slate-200 bg-slate-50 px-6 py-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500;
+  }
+
+  .sidebar-search {
+    @apply mx-6 mt-4 h-11 rounded-xl border border-slate-300 bg-white/95 px-4 text-sm text-slate-600 shadow-sm placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10;
+  }
+
+  .apps-list {
+    @apply grid flex-1 gap-3 overflow-y-auto px-6 pb-6 pt-4 sm:grid-cols-2 lg:grid-cols-3;
+  }
+
+  .app-item {
+    @apply relative flex flex-col items-center gap-2 rounded-xl border border-transparent bg-white/80 p-4 text-center text-sm text-slate-600 shadow-sm transition hover:-translate-y-1 hover:border-primary/40 hover:bg-white hover:shadow-lg;
+  }
+
+  .app-icon {
+    @apply h-12 w-12 rounded-xl object-cover shadow-md;
+  }
+
+  .app-name {
+    @apply w-full overflow-hidden text-sm font-medium text-slate-600;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .bookmarks-list,
+  .recent-tabs-list {
+    @apply flex-1 overflow-y-auto px-2 pb-4 pt-2;
+  }
+
+  .bookmark-item,
+  .recent-tab-item {
+    @apply relative flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-600 transition hover:bg-primary/5;
+  }
+
+  .bookmark-item + .bookmark-item,
+  .recent-tab-item + .recent-tab-item {
+    @apply mt-1;
+  }
+
+  .bookmark-favicon,
+  .recent-tab-favicon {
+    @apply h-5 w-5 flex-shrink-0 rounded-md object-cover shadow-sm;
+  }
+
+  .recent-tab-info {
+    @apply min-w-0 flex-1;
+  }
+
+  .recent-tab-title {
+    @apply truncate text-sm font-medium text-slate-700;
+  }
+
+  .recent-tab-time {
+    @apply text-xs text-slate-400;
+  }
+
+  .bookmark-title {
+    @apply flex-1 truncate text-sm font-medium text-slate-700;
+  }
+
+  .bookmark-folder {
+    @apply font-semibold text-primary;
+  }
+
+  .bookmark-folder-item {
+    @apply bg-primary/5;
+  }
+
+  .bookmark-folder-arrow {
+    @apply ml-auto text-lg text-slate-400;
+  }
+
+  .bookmark-back {
+    @apply bg-primary/10 text-primary;
+  }
+
+  .bookmark-back-icon {
+    @apply text-lg font-bold;
+  }
+
+  /* 模态框 */
+  .modal {
+    @apply fixed inset-0 z-[2000] hidden items-center justify-center bg-slate-900/60 backdrop-blur;
+  }
+
+  .modal.open {
+    @apply flex;
+  }
+
+  .modal-content {
+    @apply relative w-full max-w-xl overflow-hidden rounded-2xl bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.35)] backdrop-blur;
+  }
+
+  .modal-small {
+    @apply max-w-md;
+  }
+
+  .modal-header {
+    @apply flex items-center justify-between border-b border-slate-200 px-6 py-5;
+  }
+
+  .modal-header h2 {
+    @apply text-lg font-semibold text-slate-800;
+  }
+
+  .modal-close {
+    @apply flex h-9 w-9 items-center justify-center rounded-full text-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600;
+  }
+
+  .modal-body {
+    @apply space-y-5 px-6 py-6;
+  }
+
+  .form-group {
+    @apply space-y-2;
+  }
+
+  .form-group label {
+    @apply text-sm font-medium text-slate-600;
+  }
+
+  .form-group input {
+    @apply w-full rounded-xl border border-slate-300 bg-white/95 px-3 py-2 text-sm text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10;
+  }
+
+  .modal-footer {
+    @apply flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4;
+  }
+
+  /* Toast */
+  .toast {
+    @apply fixed right-6 top-6 z-[9999] flex max-w-sm translate-x-full items-center gap-3 rounded-xl bg-white px-5 py-3 text-sm text-slate-700 shadow-lg transition;
+  }
+
+  .toast.show {
+    @apply translate-x-0;
+  }
+
+  .toast.success {
+    @apply border-l-4 border-secondary;
+  }
+
+  .toast.error {
+    @apply border-l-4 border-danger;
+  }
+
+  /* 设置页面布局 */
+  .nav-link {
+    @apply flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-medium text-slate-500 transition hover:bg-primary/10 hover:text-primary;
+  }
+
+  .setting-card {
+    @apply rounded-3xl border border-slate-200 bg-white/95 p-7 shadow-card backdrop-blur-sm transition hover:border-primary/30 hover:shadow-[0_25px_60px_rgba(15,23,42,0.15)];
+  }
+
+  .setting-head {
+    @apply flex flex-wrap items-start justify-between gap-4;
+  }
+
+  .setting-title {
+    @apply text-lg font-semibold text-slate-900;
+  }
+
+  .setting-desc {
+    @apply mt-1 text-sm text-slate-500;
+  }
+
+  .field-label {
+    @apply text-sm font-semibold text-slate-700;
+  }
+
+  .setting-select {
+    @apply h-11 w-full rounded-2xl border border-slate-200 bg-white/95 px-4 text-sm text-slate-700 shadow-sm transition focus:border-primary focus:ring-4 focus:ring-primary/10;
+  }
+
+  .setting-input {
+    @apply h-11 w-full rounded-2xl border border-slate-200 bg-white/95 px-4 text-sm text-slate-700 shadow-sm transition focus:border-primary focus:ring-4 focus:ring-primary/10;
+  }
+
+  .toggle-item {
+    @apply flex items-center justify-between gap-6 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 shadow-sm transition hover:border-primary/30 hover:bg-white;
+  }
+
+  .toggle-title {
+    @apply text-base font-semibold text-slate-800;
+  }
+
+  .toggle-desc {
+    @apply text-xs text-slate-500;
+  }
+
+  textarea.setting-textarea {
+    @apply w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4 text-sm font-mono text-slate-700 shadow-inner focus:border-primary focus:ring-4 focus:ring-primary/10;
+  }
+
+  .switch {
+    @apply relative inline-flex h-7 w-12 cursor-pointer items-center rounded-full bg-slate-300 transition;
+  }
+
+  .switch input {
+    @apply sr-only;
+  }
+
+  .switch .slider {
+    @apply absolute inset-0 rounded-full transition;
+  }
+
+  .switch .slider::before {
+    content: '';
+    @apply absolute bottom-[4px] left-[4px] h-5 w-5 rounded-full bg-white transition;
+  }
+
+  .switch input:checked + .slider {
+    @apply bg-primary;
+  }
+
+  .switch input:checked + .slider::before {
+    @apply translate-x-5;
+  }
+
+  .actions {
+    @apply mt-12 flex items-center justify-center gap-4;
+  }
+
+  .close-btn {
+    @apply fixed right-6 top-6 flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-2xl text-slate-600 shadow-lg transition hover:scale-110 hover:bg-white hover:text-danger;
+  }
+
+  .file-input-wrapper {
+    @apply relative inline-flex;
+  }
+
+  .file-input-wrapper input[type='file'] {
+    @apply absolute h-0 w-0 opacity-0;
+  }
+
+  .preset-bg {
+    @apply h-20 w-28 rounded-xl border-2 border-slate-200 bg-cover bg-center transition hover:scale-105 hover:border-primary;
+  }
+
+  .preset-bg.selected {
+    @apply border-2 border-primary shadow-lg;
+  }
+
+  input[type='range'] {
+    @apply h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200;
+  }
+
+  input[type='range']::-webkit-slider-thumb {
+    @apply h-4 w-4 appearance-none rounded-full bg-primary;
+  }
+
+  input[type='range']::-moz-range-thumb {
+    @apply h-4 w-4 rounded-full border-0 bg-primary;
+  }
+
+  .loading {
+    @apply flex items-center justify-center p-6;
+  }
+
+  .loading-spinner {
+    @apply h-8 w-8 animate-spin rounded-full border-[3px] border-slate-200 border-t-primary;
+  }
+
+  .empty-state {
+    @apply flex flex-col items-center justify-center space-y-3 px-6 py-12 text-center text-slate-400;
+  }
+
+  /* Popup */
+  .popup-body {
+    @apply w-[320px] bg-surfaceMuted px-6 py-6 text-slate-800;
+  }
+
+  .popup-body h1 {
+    @apply mb-4 text-lg font-semibold;
+  }
+
+  .info,
+  .stats,
+  .actions {
+    @apply mb-4 rounded-2xl bg-white/95 p-5 shadow-[0_12px_30px_rgba(15,23,42,0.12)];
+  }
+
+  .info:last-of-type,
+  .stats:last-of-type,
+  .actions:last-of-type {
+    @apply mb-0;
+  }
+
+  .info p {
+    @apply mb-2 text-sm text-slate-500;
+  }
+
+  .stats {
+    @apply flex items-center justify-around gap-4;
+  }
+
+  .stat-item {
+    @apply text-center;
+  }
+
+  .stat-value {
+    @apply text-2xl font-semibold text-primary;
+  }
+
+  .stat-label {
+    @apply text-xs text-slate-400;
+  }
+
+  .actions .btn {
+    @apply mb-3 w-full;
+  }
+
+  .actions .btn:last-child {
+    @apply mb-0;
+  }
+
+  .version {
+    @apply mt-4 text-center text-xs text-slate-400;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.6);
+    border-radius: 9999px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(71, 85, 105, 0.7);
+  }
+}

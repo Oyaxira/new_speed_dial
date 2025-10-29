@@ -1,3 +1,120 @@
+const SETTINGS_KEY = 'speed_dial_settings';
+
+const defaultSettings = {
+  theme: 'light',
+  columns: 'auto',
+  showTitles: true,
+  backgroundImage: '',
+  backgroundImageData: '',
+  backgroundStyle: 'cover',
+  backgroundOpacity: 100,
+  backgroundColor: '#f5f5f5',
+  fontSize: 'medium',
+  sidebarPosition: 'right',
+  autoOpenSidebar: false,
+  maxRecentTabs: 20,
+  showFavicons: true,
+  showApps: true,
+  customCSS: ''
+};
+
+async function readSettings() {
+  try {
+    const result = await chrome.storage.local.get(SETTINGS_KEY);
+    return { ...defaultSettings, ...result[SETTINGS_KEY] };
+  } catch (error) {
+    console.error('读取设置失败:', error);
+    return { ...defaultSettings };
+  }
+}
+
+function clampNumber(value, min, max, fallback) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, numeric));
+}
+
+function resolveBackgroundStyle(style) {
+  const styles = {
+    cover: { size: 'cover', position: 'center center', repeat: 'no-repeat' },
+    contain: { size: 'contain', position: 'center center', repeat: 'no-repeat' },
+    repeat: { size: 'auto', position: 'top left', repeat: 'repeat' },
+    center: { size: 'auto', position: 'center center', repeat: 'no-repeat' }
+  };
+  return styles[style] || styles.cover;
+}
+
+function updateBackgroundOverlay(opacity, theme) {
+  const overlayId = 'background-opacity-overlay';
+  const clamped = clampNumber(opacity, 0, 100, defaultSettings.backgroundOpacity);
+  let overlay = document.getElementById(overlayId);
+
+  if (clamped >= 100) {
+    if (overlay) {
+      overlay.remove();
+    }
+    return;
+  }
+
+  const alpha = (100 - clamped) / 100;
+  const color = theme === 'dark' ? '0, 0, 0' : '255, 255, 255';
+
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = overlayId;
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.pointerEvents = 'none';
+    overlay.style.zIndex = '0';
+    document.body.insertBefore(overlay, document.body.firstChild);
+
+    const appRoot = document.getElementById('app');
+    if (appRoot) {
+      if (!appRoot.style.position) {
+        appRoot.style.position = 'relative';
+      }
+      if (!appRoot.style.zIndex) {
+        appRoot.style.zIndex = '1';
+      }
+    }
+  }
+
+  overlay.style.backgroundColor = `rgba(${color}, ${alpha})`;
+}
+
+function applyCustomCss(css) {
+  let styleElement = document.getElementById('custom-css');
+  if (!styleElement) {
+    styleElement = document.createElement('style');
+    styleElement.id = 'custom-css';
+    document.head.appendChild(styleElement);
+  }
+  styleElement.textContent = css || '';
+}
+
+function toBoolean(value, defaultValue = true) {
+  if (value === undefined || value === null) {
+    return defaultValue;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['false', '0', 'no'].includes(normalized)) {
+      return false;
+    }
+    if (['true', '1', 'yes'].includes(normalized)) {
+      return true;
+    }
+  }
+
+  return Boolean(value);
+}
+
 // 数据管理
 class DataManager {
   constructor() {
@@ -105,10 +222,9 @@ class UIManager {
 
   async init() {
     this.bindEvents();
-    this.loadDials();
-    await this.loadAppsIfEnabled();
-    this.loadRecentTabs();
-    this.applySettings();
+    await this.applySettings();
+    await this.loadDials();
+    await this.loadRecentTabs();
   }
 
   bindEvents() {
@@ -411,32 +527,6 @@ class UIManager {
   closeModal(modalId) {
     document.getElementById(modalId).classList.remove('open');
   }
-
-  // 加载应用程序
-  // 根据设置加载应用程序
-  async loadAppsIfEnabled() {
-    try {
-      const result = await chrome.storage.local.get('speed_dial_settings');
-      const settings = result.speed_dial_settings || {};
-
-      const appsSection = document.querySelector('.sidebar-section:first-child');
-      if (settings.showApps === false) {
-        // 隐藏应用程序区域
-        if (appsSection) {
-          appsSection.style.display = 'none';
-        }
-      } else {
-        // 显示应用程序区域
-        if (appsSection) {
-          appsSection.style.display = 'block';
-        }
-        await this.loadApps();
-      }
-    } catch (error) {
-      console.error('加载应用设置失败:', error);
-    }
-  }
-
   async loadApps() {
     try {
       const apps = await chrome.management.getAll();
@@ -456,6 +546,31 @@ class UIManager {
       }
     } catch (error) {
       console.error('加载应用失败:', error);
+    }
+  }
+
+  updateSidebarLayout(showApps) {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarContent = document.querySelector('.sidebar-content');
+    const appsSection = document.querySelector('.sidebar-section[data-section="apps"]');
+
+    if (sidebarContent) {
+      const columnCount = showApps ? 3 : 2;
+      sidebarContent.style.gridTemplateColumns = `repeat(${columnCount}, minmax(0, 1fr))`;
+    }
+
+    if (appsSection) {
+      if (showApps) {
+        appsSection.style.display = 'flex';
+        appsSection.setAttribute('aria-hidden', 'false');
+      } else {
+        appsSection.style.display = 'none';
+        appsSection.setAttribute('aria-hidden', 'true');
+      }
+    }
+
+    if (sidebar) {
+      sidebar.style.width = showApps ? '1080px' : '720px';
     }
   }
 
@@ -506,11 +621,10 @@ class UIManager {
         });
       } else {
         // 没有搜索词，显示最近关闭的标签页
-        const result = await chrome.storage.local.get('speed_dial_settings');
-        const settings = result.speed_dial_settings || {};
-        const maxResults = settings.maxRecentTabs || 20;
+        const settings = await readSettings();
+        const maxResults = clampNumber(settings.maxRecentTabs, 5, 100, defaultSettings.maxRecentTabs);
 
-        const sessions = await chrome.sessions.getRecentlyClosed({ maxResults: maxResults });
+        const sessions = await chrome.sessions.getRecentlyClosed({ maxResults });
         const tabs = sessions.filter(session => session.tab);
 
         if (tabs.length === 0) {
@@ -536,8 +650,6 @@ class UIManager {
 
     const faviconUrl = tab.favIconUrl || this.dataManager.getFaviconUrl(tab.url || '');
     // Chrome的时间戳是从Chrome纪元开始的，需要转换为标准时间戳
-    // 添加调试信息
-    console.log('Session lastModified:', session.lastModified, 'Type:', typeof session.lastModified);
     const timeAgo = this.getTimeAgo(session.lastModified);
 
     item.innerHTML = `
@@ -824,134 +936,121 @@ class UIManager {
   // 应用设置
   async applySettings() {
     try {
-      const result = await chrome.storage.local.get('speed_dial_settings');
-      const settings = result.speed_dial_settings || {};
+      const settings = await readSettings();
+      const root = document.documentElement;
+      const body = document.body;
 
       // 应用主题
       if (settings.theme === 'dark') {
-        document.documentElement.style.setProperty('--bg-color', '#1a1a1a');
-        document.documentElement.style.setProperty('--card-bg', '#2d2d2d');
-        document.documentElement.style.setProperty('--text-color', '#e8eaed');
-        document.documentElement.style.setProperty('--text-secondary', '#9aa0a6');
-        document.documentElement.style.setProperty('--border-color', '#3c4043');
-        document.documentElement.style.setProperty('--hover-bg', '#3c4043');
+        root.style.setProperty('--bg-color', '#1a1a1a');
+        root.style.setProperty('--card-bg', '#2d2d2d');
+        root.style.setProperty('--text-color', '#e8eaed');
+        root.style.setProperty('--text-secondary', '#9aa0a6');
+        root.style.setProperty('--border-color', '#3c4043');
+        root.style.setProperty('--hover-bg', '#3c4043');
       } else {
-        document.documentElement.style.setProperty('--bg-color', '#f5f5f5');
-        document.documentElement.style.setProperty('--card-bg', '#ffffff');
-        document.documentElement.style.setProperty('--text-color', '#202124');
-        document.documentElement.style.setProperty('--text-secondary', '#5f6368');
-        document.documentElement.style.setProperty('--border-color', '#dadce0');
-        document.documentElement.style.setProperty('--hover-bg', '#f1f3f4');
+        root.style.setProperty('--bg-color', '#f5f5f5');
+        root.style.setProperty('--card-bg', '#ffffff');
+        root.style.setProperty('--text-color', '#202124');
+        root.style.setProperty('--text-secondary', '#5f6368');
+        root.style.setProperty('--border-color', '#dadce0');
+        root.style.setProperty('--hover-bg', '#f1f3f4');
       }
+
+      const backgroundColor = settings.backgroundColor || (settings.theme === 'dark' ? '#1a1a1a' : defaultSettings.backgroundColor);
+      body.style.backgroundColor = backgroundColor;
 
       // 应用列数设置
       const dialsGrid = document.getElementById('dials-grid');
-      if (settings.columns && settings.columns !== 'auto') {
-        dialsGrid.style.gridTemplateColumns = `repeat(${settings.columns}, 1fr)`;
-      } else {
-        dialsGrid.style.gridTemplateColumns = '';
+      if (dialsGrid) {
+        if (settings.columns && settings.columns !== 'auto') {
+          const columnCount = parseInt(settings.columns, 10);
+          if (Number.isFinite(columnCount) && columnCount > 0) {
+            dialsGrid.style.gridTemplateColumns = `repeat(${columnCount}, 1fr)`;
+          } else {
+            dialsGrid.style.gridTemplateColumns = '';
+          }
+        } else {
+          dialsGrid.style.gridTemplateColumns = '';
+        }
       }
 
-      // 应用背景图片
+      // 清理旧版本残留的覆盖层
+      const legacyOverlay = document.getElementById('bg-overlay');
+      if (legacyOverlay) {
+        legacyOverlay.remove();
+      }
+
+      // 应用背景
       if (settings.backgroundImageData || settings.backgroundImage) {
         const bgUrl = settings.backgroundImageData || settings.backgroundImage;
-        const opacity = settings.backgroundOpacity || 100;
-        const style = settings.backgroundStyle || 'cover';
+        const { size, position, repeat } = resolveBackgroundStyle(settings.backgroundStyle);
 
-        document.body.style.backgroundImage = `url(${bgUrl})`;
-        document.body.style.backgroundSize = style;
-        document.body.style.backgroundPosition = 'center';
-        document.body.style.backgroundRepeat = style === 'repeat' ? 'repeat' : 'no-repeat';
-        document.body.style.backgroundAttachment = 'fixed';
+        body.style.backgroundImage = `url(${bgUrl})`;
+        body.style.backgroundSize = size;
+        body.style.backgroundPosition = position;
+        body.style.backgroundRepeat = repeat;
+        body.style.backgroundAttachment = 'fixed';
 
-        // 应用不透明度
-        if (opacity < 100) {
-          // 移除旧的overlay
-          const oldOverlay = document.getElementById('bg-overlay');
-          if (oldOverlay) oldOverlay.remove();
-
-          const overlay = document.createElement('div');
-          overlay.id = 'bg-overlay';
-          overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, ${(100 - opacity) / 100});
-            pointer-events: none;
-            z-index: -1;
-          `;
-          document.body.appendChild(overlay);
-        }
-      } else if (settings.backgroundColor) {
-        document.body.style.backgroundColor = settings.backgroundColor;
-        document.body.style.backgroundImage = '';
+        updateBackgroundOverlay(settings.backgroundOpacity, settings.theme);
+      } else {
+        body.style.backgroundImage = '';
+        body.style.backgroundSize = '';
+        body.style.backgroundPosition = '';
+        body.style.backgroundRepeat = '';
+        body.style.backgroundAttachment = '';
+        updateBackgroundOverlay(100, settings.theme);
       }
 
       // 应用字体大小
-      if (settings.fontSize) {
-        const fontSizeMap = {
-          small: '12px',
-          medium: '14px',
-          large: '16px',
-          xlarge: '18px'
-        };
-        document.documentElement.style.fontSize = fontSizeMap[settings.fontSize] || '14px';
-      }
+      const fontSizeMap = {
+        small: '12px',
+        medium: '14px',
+        large: '16px',
+        xlarge: '18px'
+      };
+      root.style.fontSize = fontSizeMap[settings.fontSize] || fontSizeMap.medium;
 
-      // 应用显示图标设置
-      if (settings.showFavicons === false) {
-        document.documentElement.style.setProperty('--favicon-display', 'none');
-      } else {
-        document.documentElement.style.setProperty('--favicon-display', 'block');
-      }
+      // 应用显示图标与标题设置
+      const showFavicons = toBoolean(settings.showFavicons, defaultSettings.showFavicons);
+      root.style.setProperty('--favicon-display', showFavicons ? 'block' : 'none');
 
-      // 应用显示标题设置
-      if (settings.showTitles === false) {
-        document.documentElement.style.setProperty('--title-display', 'none');
-      } else {
-        document.documentElement.style.setProperty('--title-display', 'block');
-      }
+      const showTitles = toBoolean(settings.showTitles, defaultSettings.showTitles);
+      root.style.setProperty('--title-display', showTitles ? '-webkit-box' : 'none');
 
       // 应用侧边栏位置
       const sidebar = document.getElementById('sidebar');
       const sidebarToggle = document.getElementById('sidebar-toggle');
 
-      if (settings.sidebarPosition === 'left') {
-        sidebar.classList.add('sidebar-left');
-        sidebar.classList.remove('sidebar-right');
-        sidebarToggle.style.left = '20px';
-        sidebarToggle.style.right = 'auto';
-      } else {
-        sidebar.classList.add('sidebar-right');
-        sidebar.classList.remove('sidebar-left');
-        sidebarToggle.style.right = '20px';
-        sidebarToggle.style.left = 'auto';
-      }
-
-      // 应用显示应用程序设置
-      const appsSection = document.querySelector('.sidebar-section:first-child');
-      if (settings.showApps === false) {
-        if (appsSection) {
-          appsSection.style.display = 'none';
-        }
-        // 调整侧边栏宽度为两栏
-        if (sidebar) {
-          sidebar.style.width = '720px';
-        }
-      } else {
-        if (appsSection) {
-          appsSection.style.display = 'block';
-        }
-        // 恢复侧边栏宽度为三栏
-        if (sidebar) {
-          sidebar.style.width = '1080px';
+      if (sidebar && sidebarToggle) {
+        if (settings.sidebarPosition === 'left') {
+          sidebar.classList.add('sidebar-left');
+          sidebar.classList.remove('sidebar-right');
+          sidebarToggle.style.left = '20px';
+          sidebarToggle.style.right = 'auto';
+        } else {
+          sidebar.classList.add('sidebar-right');
+          sidebar.classList.remove('sidebar-left');
+          sidebarToggle.style.right = '20px';
+          sidebarToggle.style.left = 'auto';
         }
       }
 
-      // 自动打开侧边栏
-      if (settings.autoOpenSidebar) {
+      const showApps = toBoolean(settings.showApps, defaultSettings.showApps);
+      this.updateSidebarLayout(showApps);
+      if (showApps) {
+        await this.loadApps();
+      } else {
+        const appsList = document.getElementById('apps-list');
+        if (appsList) {
+          appsList.innerHTML = '';
+        }
+      }
+
+      applyCustomCss(settings.customCSS);
+
+      const autoOpenSidebar = toBoolean(settings.autoOpenSidebar, defaultSettings.autoOpenSidebar);
+      if (autoOpenSidebar && sidebar) {
         setTimeout(() => {
           sidebar.classList.add('open');
         }, 300);
@@ -973,7 +1072,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     uiManager.loadDials();
   }
   // 监听设置变化
-  if (namespace === 'local' && changes.speed_dial_settings) {
+  if (namespace === 'local' && changes[SETTINGS_KEY]) {
     uiManager.applySettings();
   }
 });

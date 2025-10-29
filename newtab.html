@@ -5,8 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>新标签页</title>
-  <link rel="stylesheet" href="styles/newtab.css">
-  <link rel="stylesheet" href="styles/sidebar.css">
+  <link rel="stylesheet" href="styles/tailwind.generated.css">
 </head>
 
 <body>
@@ -38,20 +37,20 @@
 
       <div class="sidebar-content">
         <!-- 应用程序面板 -->
-        <div class="sidebar-section">
+        <div class="sidebar-section" data-section="apps">
           <h3 class="sidebar-title">应用程序</h3>
           <div id="apps-list" class="apps-list"></div>
         </div>
 
         <!-- 书签面板 -->
-        <div class="sidebar-section">
+        <div class="sidebar-section" data-section="bookmarks">
           <h3 class="sidebar-title">书签</h3>
           <input type="text" id="bookmark-search" class="sidebar-search" placeholder="搜索书签..." />
           <div id="bookmarks-list" class="bookmarks-list"></div>
         </div>
 
         <!-- 最近关闭的标签页 -->
-        <div class="sidebar-section">
+        <div class="sidebar-section" data-section="recent">
           <h3 class="sidebar-title">最近关闭的标签页</h3>
           <input type="text" id="recent-tabs-search" class="sidebar-search" placeholder="搜索最近标签页..." />
           <div id="recent-tabs-list" class="recent-tabs-list"></div>

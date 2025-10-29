@@ -1,0 +1,17 @@
+{
+  "name": "new_speed_dial",
+  "version": "1.0.0",
+  "description": "一个功能丰富的 Chrome 扩展，用于替代默认的新标签页，提供快速拨号、书签管理和侧边栏功能。基于 Manifest V3 开发，采用网页缩略图截图技术，提供更直观的视觉体验。",
+  "main": "background.js",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev": "tailwindcss -c tailwind.config.cjs -i src/styles/tailwind.css -o styles/tailwind.generated.css --watch",
+    "build": "tailwindcss -m -c tailwind.config.cjs -i src/styles/tailwind.css -o styles/tailwind.generated.css"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.4.13"
+  }
+}
