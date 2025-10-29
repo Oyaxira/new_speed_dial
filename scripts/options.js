@@ -132,6 +132,29 @@ function getTextareaValue(id, fallback) {
   return textarea ? textarea.value : fallback;
 }
 
+function setButtonLoading(button, isLoading, loadingText = '保存中...') {
+  if (!button) {
+    return;
+  }
+
+  if (isLoading) {
+    if (!button.dataset.originalContent) {
+      button.dataset.originalContent = button.innerHTML;
+    }
+    button.disabled = true;
+    button.classList.add('btn--loading');
+    button.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span>${loadingText}`;
+  } else {
+    const original = button.dataset.originalContent;
+    if (original) {
+      button.innerHTML = original;
+      delete button.dataset.originalContent;
+    }
+    button.disabled = false;
+    button.classList.remove('btn--loading');
+  }
+}
+
 function returnToNewTab() {
   const targetUrl = chrome.runtime.getURL('newtab.html');
   if (!chrome.tabs || !chrome.tabs.getCurrent) {
@@ -208,19 +231,25 @@ async function loadSettings() {
 
 // 保存设置
 async function saveSettings() {
+  const saveBtn = getElement('saveSettings');
+  setButtonLoading(saveBtn, true);
+
   try {
     const result = await chrome.storage.local.get(SETTINGS_KEY);
     const oldSettings = result[SETTINGS_KEY] || {};
 
-    const backgroundOpacityInput = document.getElementById('backgroundOpacity');
-    const maxRecentTabsInput = document.getElementById('maxRecentTabs');
+    const backgroundOpacityInput = getElement('backgroundOpacity');
+    const maxRecentTabsInput = getElement('maxRecentTabs');
 
     const backgroundOpacity = clampNumber(backgroundOpacityInput.value, 0, 100, defaultSettings.backgroundOpacity);
     const maxRecentTabs = clampNumber(maxRecentTabsInput.value, 5, 100, defaultSettings.maxRecentTabs);
 
     backgroundOpacityInput.value = backgroundOpacity;
     maxRecentTabsInput.value = maxRecentTabs;
-    document.getElementById('opacityValue').textContent = `${backgroundOpacity}%`;
+    const opacityLabel = getElement('opacityValue');
+    if (opacityLabel) {
+      opacityLabel.textContent = `${backgroundOpacity}%`;
+    }
 
     const settings = {
       theme: getSelectValue('theme', defaultSettings.theme),
@@ -250,6 +279,8 @@ async function saveSettings() {
   } catch (error) {
     console.error('保存设置失败:', error);
     showToast('保存失败', 'error');
+  } finally {
+    setButtonLoading(saveBtn, false);
   }
 }
 
@@ -311,13 +342,30 @@ async function importData(file) {
 
 // 显示提示
 function showToast(message, type = 'success') {
-  const toast = document.getElementById('toast');
-  toast.textContent = message;
-  toast.className = `toast ${type} show`;
+  let toast = document.getElementById('toast');
 
-  setTimeout(() => {
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.className = 'toast';
+    document.body.appendChild(toast);
+  }
+
+  toast.textContent = message;
+  toast.classList.remove('success', 'error', 'info');
+  toast.classList.add(type);
+
+  // 触发动画
+  requestAnimationFrame(() => {
+    toast.classList.add('show');
+  });
+
+  if (toast._hideTimer) {
+    clearTimeout(toast._hideTimer);
+  }
+  toast._hideTimer = setTimeout(() => {
     toast.classList.remove('show');
-  }, 3000);
+  }, 3200);
 }
 
 // 事件监听
