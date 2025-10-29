@@ -7,7 +7,6 @@ const defaultSettings = {
   theme: 'light',
   columns: 'auto',
   showTitles: true,
-  showAddButton: true,
   backgroundImage: '',
   backgroundImageData: '',
   backgroundStyle: 'cover',
@@ -18,41 +17,212 @@ const defaultSettings = {
   autoOpenSidebar: false,
   maxRecentTabs: 20,
   showFavicons: true,
-  showApps: false,
-  enableAnimations: true,
+  showApps: true,
   customCSS: ''
 };
+
+function clampNumber(value, min, max, fallback) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, numeric));
+}
+
+function updateBackgroundPreview(settings) {
+  const preview = document.getElementById('currentBackground');
+  if (!preview) {
+    return;
+  }
+
+  const opacity = clampNumber(settings.backgroundOpacity ?? defaultSettings.backgroundOpacity, 0, 100, defaultSettings.backgroundOpacity);
+  if (settings.backgroundImageData || settings.backgroundImage) {
+    const url = settings.backgroundImageData || settings.backgroundImage;
+    preview.style.backgroundImage = `url(${url})`;
+    preview.style.display = 'block';
+    preview.style.opacity = (opacity / 100).toString();
+  } else {
+    preview.style.display = 'none';
+    preview.style.backgroundImage = '';
+  }
+}
+
+function markSelectedPreset(activeUrl) {
+  document.querySelectorAll('.preset-bg').forEach((preset) => {
+    if (preset.getAttribute('data-url') === activeUrl) {
+      preset.classList.add('selected');
+    } else {
+      preset.classList.remove('selected');
+    }
+  });
+}
+
+function getCurrentOpacityValue() {
+  const slider = document.getElementById('backgroundOpacity');
+  if (!slider) {
+    return defaultSettings.backgroundOpacity;
+  }
+  return clampNumber(slider.value, 0, 100, defaultSettings.backgroundOpacity);
+}
+
+function toBoolean(value, defaultValue = true) {
+  if (value === undefined || value === null) {
+    return defaultValue;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['false', '0', 'no'].includes(normalized)) {
+      return false;
+    }
+    if (['true', '1', 'yes'].includes(normalized)) {
+      return true;
+    }
+  }
+
+  return Boolean(value);
+}
+
+function getElement(id) {
+  return document.getElementById(id);
+}
+
+function setSelectValue(id, value, fallback) {
+  const select = getElement(id);
+  if (!select) {
+    return;
+  }
+  const availableOption = Array.from(select.options || []).some((option) => option.value === value);
+  select.value = availableOption ? value : fallback;
+}
+
+function setCheckboxState(id, checked) {
+  const checkbox = getElement(id);
+  if (!checkbox) {
+    return;
+  }
+  checkbox.checked = checked;
+}
+
+function setInputValue(id, value) {
+  const input = getElement(id);
+  if (!input) {
+    return;
+  }
+  input.value = value;
+}
+
+function getSelectValue(id, fallback) {
+  const select = getElement(id);
+  return select ? select.value : fallback;
+}
+
+function getCheckboxValue(id, fallback) {
+  const checkbox = getElement(id);
+  return checkbox ? checkbox.checked : fallback;
+}
+
+function getInputValue(id, fallback) {
+  const input = getElement(id);
+  return input && typeof input.value !== 'undefined' ? input.value : fallback;
+}
+
+function getTextareaValue(id, fallback) {
+  const textarea = getElement(id);
+  return textarea ? textarea.value : fallback;
+}
+
+function setButtonLoading(button, isLoading, loadingText = '保存中...') {
+  if (!button) {
+    return;
+  }
+
+  if (isLoading) {
+    if (!button.dataset.originalContent) {
+      button.dataset.originalContent = button.innerHTML;
+    }
+    button.disabled = true;
+    button.classList.add('btn--loading');
+    button.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span>${loadingText}`;
+  } else {
+    const original = button.dataset.originalContent;
+    if (original) {
+      button.innerHTML = original;
+      delete button.dataset.originalContent;
+    }
+    button.disabled = false;
+    button.classList.remove('btn--loading');
+  }
+}
+
+function returnToNewTab() {
+  const targetUrl = chrome.runtime.getURL('newtab.html');
+  if (!chrome.tabs || !chrome.tabs.getCurrent) {
+    window.location.href = targetUrl;
+    return;
+  }
+
+  try {
+    chrome.tabs.getCurrent((tab) => {
+      if (chrome.runtime.lastError) {
+        window.location.href = targetUrl;
+        return;
+      }
+
+      if (tab && typeof tab.id === 'number') {
+        chrome.tabs.update(tab.id, { url: targetUrl });
+      } else {
+        window.location.href = targetUrl;
+      }
+    });
+  } catch (error) {
+    console.error('返回新标签页失败:', error);
+    window.location.href = targetUrl;
+  }
+}
 
 // 加载设置
 async function loadSettings() {
   try {
     const result = await chrome.storage.local.get(SETTINGS_KEY);
     const settings = { ...defaultSettings, ...result[SETTINGS_KEY] };
+    const opacity = clampNumber(settings.backgroundOpacity, 0, 100, defaultSettings.backgroundOpacity);
+    const maxRecentTabs = clampNumber(settings.maxRecentTabs, 5, 100, defaultSettings.maxRecentTabs);
 
     // 应用设置到表单
-    document.getElementById('theme').value = settings.theme;
-    document.getElementById('columns').value = settings.columns;
-    document.getElementById('showTitles').checked = settings.showTitles;
-    document.getElementById('backgroundColor').value = settings.backgroundColor;
-    document.getElementById('backgroundStyle').value = settings.backgroundStyle || 'cover';
-    document.getElementById('backgroundOpacity').value = settings.backgroundOpacity || 100;
-    document.getElementById('opacityValue').textContent = (settings.backgroundOpacity || 100) + '%';
-    document.getElementById('fontSize').value = settings.fontSize;
-    document.getElementById('sidebarPosition').value = settings.sidebarPosition;
-    document.getElementById('autoOpenSidebar').checked = settings.autoOpenSidebar;
-    document.getElementById('maxRecentTabs').value = settings.maxRecentTabs;
-    document.getElementById('showFavicons').checked = settings.showFavicons;
-    document.getElementById('showApps').checked = settings.showApps;
-    document.getElementById('enableAnimations').checked = settings.enableAnimations;
-    document.getElementById('customCSS').value = settings.customCSS || '';
+    setSelectValue('theme', settings.theme, defaultSettings.theme);
+    setSelectValue('columns', settings.columns, defaultSettings.columns);
 
-    // 显示当前背景图片
-    if (settings.backgroundImageData || settings.backgroundImage) {
-      const bgPreview = document.getElementById('currentBackground');
-      bgPreview.style.backgroundImage = `url(${settings.backgroundImageData || settings.backgroundImage})`;
-      bgPreview.style.display = 'block';
+    const showTitles = toBoolean(settings.showTitles, defaultSettings.showTitles);
+    setCheckboxState('showTitles', showTitles);
+
+    setInputValue('backgroundColor', settings.backgroundColor);
+    setSelectValue('backgroundStyle', settings.backgroundStyle || defaultSettings.backgroundStyle, defaultSettings.backgroundStyle);
+    setInputValue('backgroundOpacity', opacity);
+    const opacityLabel = getElement('opacityValue');
+    if (opacityLabel) {
+      opacityLabel.textContent = `${opacity}%`;
     }
 
+    setSelectValue('fontSize', settings.fontSize, defaultSettings.fontSize);
+    setSelectValue('sidebarPosition', settings.sidebarPosition, defaultSettings.sidebarPosition);
+
+    const autoOpenSidebar = toBoolean(settings.autoOpenSidebar, defaultSettings.autoOpenSidebar);
+    setCheckboxState('autoOpenSidebar', autoOpenSidebar);
+
+    setInputValue('maxRecentTabs', maxRecentTabs);
+
+    const showFavicons = toBoolean(settings.showFavicons, defaultSettings.showFavicons);
+    setCheckboxState('showFavicons', showFavicons);
+
+    const showApps = toBoolean(settings.showApps, defaultSettings.showApps);
+    setCheckboxState('showApps', showApps);
+
+    setInputValue('customCSS', settings.customCSS || '');
+
+    markSelectedPreset(settings.backgroundImage);
+    updateBackgroundPreview({ ...settings, backgroundOpacity: opacity });
+    applyTheme(settings.theme);
   } catch (error) {
     console.error('加载设置失败:', error);
     showToast('加载设置失败', 'error');
@@ -61,41 +231,56 @@ async function loadSettings() {
 
 // 保存设置
 async function saveSettings() {
+  const saveBtn = getElement('saveSettings');
+  setButtonLoading(saveBtn, true);
+
   try {
     const result = await chrome.storage.local.get(SETTINGS_KEY);
     const oldSettings = result[SETTINGS_KEY] || {};
 
+    const backgroundOpacityInput = getElement('backgroundOpacity');
+    const maxRecentTabsInput = getElement('maxRecentTabs');
+
+    const backgroundOpacity = clampNumber(backgroundOpacityInput.value, 0, 100, defaultSettings.backgroundOpacity);
+    const maxRecentTabs = clampNumber(maxRecentTabsInput.value, 5, 100, defaultSettings.maxRecentTabs);
+
+    backgroundOpacityInput.value = backgroundOpacity;
+    maxRecentTabsInput.value = maxRecentTabs;
+    const opacityLabel = getElement('opacityValue');
+    if (opacityLabel) {
+      opacityLabel.textContent = `${backgroundOpacity}%`;
+    }
+
     const settings = {
-      theme: document.getElementById('theme').value,
-      columns: document.getElementById('columns').value,
-      showTitles: document.getElementById('showTitles').checked,
-      backgroundColor: document.getElementById('backgroundColor').value,
+      theme: getSelectValue('theme', defaultSettings.theme),
+      columns: getSelectValue('columns', defaultSettings.columns),
+      showTitles: getCheckboxValue('showTitles', defaultSettings.showTitles),
+      backgroundColor: getInputValue('backgroundColor', defaultSettings.backgroundColor) || defaultSettings.backgroundColor,
       backgroundImage: oldSettings.backgroundImage || '',
       backgroundImageData: oldSettings.backgroundImageData || '',
-      backgroundStyle: document.getElementById('backgroundStyle').value,
-      backgroundOpacity: parseInt(document.getElementById('backgroundOpacity').value),
-      fontSize: document.getElementById('fontSize').value,
-      sidebarPosition: document.getElementById('sidebarPosition').value,
-      autoOpenSidebar: document.getElementById('autoOpenSidebar').checked,
-      maxRecentTabs: parseInt(document.getElementById('maxRecentTabs').value),
-      showFavicons: document.getElementById('showFavicons').checked,
-      showApps: document.getElementById('showApps').checked,
-      enableAnimations: document.getElementById('enableAnimations').checked,
-      customCSS: document.getElementById('customCSS').value
+      backgroundStyle: getSelectValue('backgroundStyle', defaultSettings.backgroundStyle),
+      backgroundOpacity,
+      fontSize: getSelectValue('fontSize', defaultSettings.fontSize),
+      sidebarPosition: getSelectValue('sidebarPosition', defaultSettings.sidebarPosition),
+      autoOpenSidebar: getCheckboxValue('autoOpenSidebar', defaultSettings.autoOpenSidebar),
+      maxRecentTabs,
+      showFavicons: getCheckboxValue('showFavicons', defaultSettings.showFavicons),
+      showApps: getCheckboxValue('showApps', defaultSettings.showApps),
+      customCSS: getTextareaValue('customCSS', '')
     };
 
     await chrome.storage.local.set({ [SETTINGS_KEY]: settings });
-    showToast('设置已保存', 'success');
 
-    // 应用主题和列数到当前页面预览
+    updateBackgroundPreview(settings);
+    markSelectedPreset(settings.backgroundImage);
     applyTheme(settings.theme);
-    if (settings.columns !== 'auto') {
-      console.log('列数设置为:', settings.columns);
-    }
+    showToast('设置已保存', 'success');
 
   } catch (error) {
     console.error('保存设置失败:', error);
     showToast('保存失败', 'error');
+  } finally {
+    setButtonLoading(saveBtn, false);
   }
 }
 
@@ -106,7 +291,7 @@ async function resetSettings() {
   }
 
   try {
-    await chrome.storage.local.set({ [SETTINGS_KEY]: defaultSettings });
+    await chrome.storage.local.set({ [SETTINGS_KEY]: { ...defaultSettings } });
     await loadSettings();
     showToast('设置已重置', 'success');
   } catch (error) {
@@ -157,13 +342,30 @@ async function importData(file) {
 
 // 显示提示
 function showToast(message, type = 'success') {
-  const toast = document.getElementById('toast');
-  toast.textContent = message;
-  toast.className = `toast ${type} show`;
+  let toast = document.getElementById('toast');
 
-  setTimeout(() => {
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.className = 'toast';
+    document.body.appendChild(toast);
+  }
+
+  toast.textContent = message;
+  toast.classList.remove('success', 'error', 'info');
+  toast.classList.add(type);
+
+  // 触发动画
+  requestAnimationFrame(() => {
+    toast.classList.add('show');
+  });
+
+  if (toast._hideTimer) {
+    clearTimeout(toast._hideTimer);
+  }
+  toast._hideTimer = setTimeout(() => {
     toast.classList.remove('show');
-  }, 3000);
+  }, 3200);
 }
 
 // 事件监听
@@ -171,123 +373,159 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
 
   // 关闭设置页面
-  document.getElementById('closeSettings').addEventListener('click', () => {
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      window.close();
-    }
-  });
+  const closeSettingsBtn = getElement('closeSettings');
+  if (closeSettingsBtn) {
+    closeSettingsBtn.addEventListener('click', () => {
+      returnToNewTab();
+    });
+  }
 
   // 保存设置
-  document.getElementById('saveSettings').addEventListener('click', saveSettings);
+  const saveBtn = getElement('saveSettings');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', saveSettings);
+  }
 
   // 取消（返回）
-  document.getElementById('cancelSettings').addEventListener('click', () => {
-    // 尝试返回上一页，如果是直接打开的则关闭
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      window.close();
-    }
-  });
+  const cancelBtn = getElement('cancelSettings');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      returnToNewTab();
+    });
+  }
 
   // 重置设置
-  document.getElementById('resetSettings').addEventListener('click', resetSettings);
+  const resetBtn = getElement('resetSettings');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', resetSettings);
+  }
 
   // 导出数据
-  document.getElementById('exportData').addEventListener('click', exportData);
+  const exportBtn = getElement('exportData');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', exportData);
+  }
 
   // 导入数据
-  document.getElementById('importData').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      importData(file);
-    }
-  });
+  const importInput = getElement('importData');
+  if (importInput) {
+    importInput.addEventListener('change', (e) => {
+      const file = e.target.files ? e.target.files[0] : null;
+      if (file) {
+        importData(file);
+      }
+    });
+  }
 
   // 上传按钮点击触发文件选择
-  document.getElementById('uploadButton').addEventListener('click', () => {
-    document.getElementById('backgroundImage').click();
-  });
+  const uploadBtn = getElement('uploadButton');
+  if (uploadBtn) {
+    uploadBtn.addEventListener('click', () => {
+      const fileInput = getElement('backgroundImage');
+      if (fileInput) {
+        fileInput.click();
+      }
+    });
+  }
 
   // 上传背景图片
-  document.getElementById('backgroundImage').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        showToast('图片大小不能超过5MB', 'error');
-        return;
+  const backgroundImageInput = getElement('backgroundImage');
+  if (backgroundImageInput) {
+    backgroundImageInput.addEventListener('change', async (e) => {
+      const file = e.target.files ? e.target.files[0] : null;
+      if (file) {
+        if (file.size > 5 * 1024 * 1024) {
+          showToast('图片大小不能超过5MB', 'error');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const imageData = event.target.result;
+          const result = await chrome.storage.local.get(SETTINGS_KEY);
+          const settings = { ...defaultSettings, ...result[SETTINGS_KEY] };
+          settings.backgroundImageData = imageData;
+          settings.backgroundImage = '';
+          await chrome.storage.local.set({ [SETTINGS_KEY]: settings });
+
+          markSelectedPreset('');
+          updateBackgroundPreview({ ...settings, backgroundImageData: imageData, backgroundOpacity: getCurrentOpacityValue() });
+
+          showToast('背景图片已上传', 'success');
+        };
+        reader.readAsDataURL(file);
       }
-
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const imageData = event.target.result;
-        const result = await chrome.storage.local.get(SETTINGS_KEY);
-        const settings = result[SETTINGS_KEY] || {};
-        settings.backgroundImageData = imageData;
-        settings.backgroundImage = '';
-        await chrome.storage.local.set({ [SETTINGS_KEY]: settings });
-
-        const bgPreview = document.getElementById('currentBackground');
-        bgPreview.style.backgroundImage = `url(${imageData})`;
-        bgPreview.style.display = 'block';
-
-        showToast('背景图片已上传', 'success');
-      };
-      reader.readAsDataURL(file);
-    }
-  });
+    });
+  }
 
   // 移除背景图片
-  document.getElementById('removeBackground').addEventListener('click', async () => {
-    const result = await chrome.storage.local.get(SETTINGS_KEY);
-    const settings = result[SETTINGS_KEY] || {};
-    settings.backgroundImageData = '';
-    settings.backgroundImage = '';
-    await chrome.storage.local.set({ [SETTINGS_KEY]: settings });
+  const removeBackgroundBtn = getElement('removeBackground');
+  if (removeBackgroundBtn) {
+    removeBackgroundBtn.addEventListener('click', async () => {
+      const result = await chrome.storage.local.get(SETTINGS_KEY);
+      const settings = { ...defaultSettings, ...result[SETTINGS_KEY] };
+      settings.backgroundImageData = '';
+      settings.backgroundImage = '';
+      await chrome.storage.local.set({ [SETTINGS_KEY]: settings });
 
-    const bgPreview = document.getElementById('currentBackground');
-    bgPreview.style.display = 'none';
+      markSelectedPreset('');
+      updateBackgroundPreview(settings);
 
-    showToast('背景图片已移除', 'success');
-  });
+      showToast('背景图片已移除', 'success');
+    });
+  }
 
   // 预设背景图片
-  document.querySelectorAll('.preset-bg').forEach(preset => {
+  document.querySelectorAll('.preset-bg').forEach((preset) => {
     preset.addEventListener('click', async () => {
       const url = preset.getAttribute('data-url');
       const result = await chrome.storage.local.get(SETTINGS_KEY);
-      const settings = result[SETTINGS_KEY] || {};
+      const settings = { ...defaultSettings, ...result[SETTINGS_KEY] };
       settings.backgroundImage = url;
       settings.backgroundImageData = '';
       await chrome.storage.local.set({ [SETTINGS_KEY]: settings });
 
-      document.querySelectorAll('.preset-bg').forEach(p => p.classList.remove('selected'));
-      preset.classList.add('selected');
-
-      const bgPreview = document.getElementById('currentBackground');
-      bgPreview.style.backgroundImage = `url(${url})`;
-      bgPreview.style.display = 'block';
+      markSelectedPreset(url);
+      updateBackgroundPreview({ ...settings, backgroundImage: url, backgroundOpacity: getCurrentOpacityValue() });
 
       showToast('背景图片已设置', 'success');
     });
   });
 
   // 背景不透明度滑块
-  document.getElementById('backgroundOpacity').addEventListener('input', (e) => {
-    document.getElementById('opacityValue').textContent = e.target.value + '%';
-  });
+  const backgroundOpacityInput = getElement('backgroundOpacity');
+  if (backgroundOpacityInput) {
+    backgroundOpacityInput.addEventListener('input', (e) => {
+      const value = clampNumber(e.target.value, 0, 100, defaultSettings.backgroundOpacity);
+      e.target.value = value;
+      const opacityLabel = getElement('opacityValue');
+      if (opacityLabel) {
+        opacityLabel.textContent = `${value}%`;
+      }
+
+      const preview = getElement('currentBackground');
+      if (preview && preview.style.display !== 'none') {
+        preview.style.opacity = (value / 100).toString();
+      }
+    });
+  }
 
   // 实时预览主题
-  document.getElementById('theme').addEventListener('change', (e) => {
-    applyTheme(e.target.value);
-  });
+  const themeSelect = getElement('theme');
+  if (themeSelect) {
+    themeSelect.addEventListener('change', (e) => {
+      applyTheme(e.target.value);
+    });
+  }
 
   // 实时预览背景色
-  document.getElementById('backgroundColor').addEventListener('input', (e) => {
-    document.body.style.backgroundColor = e.target.value;
-  });
+  const backgroundColorInput = getElement('backgroundColor');
+  if (backgroundColorInput) {
+    backgroundColorInput.addEventListener('input', (e) => {
+      document.body.style.backgroundColor = e.target.value;
+    });
+  }
 });
 
 // 应用主题（预览用）

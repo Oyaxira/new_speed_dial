@@ -7,16 +7,17 @@ class SettingsManager {
       theme: 'light',
       columns: 'auto',
       showTitles: true,
-      showAddButton: true,
-      searchEngine: 'google',
       backgroundImage: '',
+      backgroundImageData: '',
+      backgroundStyle: 'cover',
+      backgroundOpacity: 100,
       backgroundColor: '#f5f5f5',
       fontSize: 'medium',
       sidebarPosition: 'right',
       autoOpenSidebar: false,
-      maxRecentTabs: 10,
+      maxRecentTabs: 20,
       showFavicons: true,
-      enableAnimations: true,
+      showApps: true,
       customCSS: ''
     };
   }
@@ -45,7 +46,7 @@ class SettingsManager {
 
   async resetSettings() {
     try {
-      await chrome.storage.local.set({ [this.SETTINGS_KEY]: this.defaultSettings });
+      await chrome.storage.local.set({ [this.SETTINGS_KEY]: { ...this.defaultSettings } });
       return true;
     } catch (e) {
       console.error('重置设置失败:', e);
@@ -105,16 +106,35 @@ export function applyColumns(columns) {
 // 应用背景设置
 export function applyBackground(settings) {
   const body = document.body;
+  if (!body) {
+    return;
+  }
 
-  if (settings.backgroundImage) {
-    body.style.backgroundImage = `url(${settings.backgroundImage})`;
-    body.style.backgroundSize = 'cover';
-    body.style.backgroundPosition = 'center';
+  const hasBackgroundImage = settings.backgroundImageData || settings.backgroundImage;
+  const styleMap = {
+    cover: { size: 'cover', position: 'center center', repeat: 'no-repeat' },
+    contain: { size: 'contain', position: 'center center', repeat: 'no-repeat' },
+    repeat: { size: 'auto', position: 'top left', repeat: 'repeat' },
+    center: { size: 'auto', position: 'center center', repeat: 'no-repeat' }
+  };
+  const resolvedStyle = styleMap[settings.backgroundStyle] || styleMap.cover;
+
+  if (hasBackgroundImage) {
+    const bgUrl = settings.backgroundImageData || settings.backgroundImage;
+    body.style.backgroundImage = `url(${bgUrl})`;
+    body.style.backgroundSize = resolvedStyle.size;
+    body.style.backgroundPosition = resolvedStyle.position;
+    body.style.backgroundRepeat = resolvedStyle.repeat;
     body.style.backgroundAttachment = 'fixed';
   } else {
     body.style.backgroundImage = 'none';
-    body.style.backgroundColor = settings.backgroundColor || '#f5f5f5';
+    body.style.backgroundSize = '';
+    body.style.backgroundPosition = '';
+    body.style.backgroundRepeat = '';
+    body.style.backgroundAttachment = '';
   }
+
+  body.style.backgroundColor = settings.backgroundColor || '#f5f5f5';
 }
 
 // 应用字体大小
