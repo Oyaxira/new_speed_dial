@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Speed Dial - 快速拨号",
+  "name": "阿露的书签台",
   "version": "1.0.0",
-  "description": "快速拨号扩展 - 自定义新标签页，带有书签管理和侧边栏功能",
+  "description": "阿露的书签台 - 自定义新标签页，提供书签管理、快速访问和侧边栏辅助",
   "permissions": [
     "bookmarks",
     "storage",

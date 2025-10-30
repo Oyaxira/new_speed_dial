@@ -47,7 +47,7 @@ document.getElementById('add-current').addEventListener('click', async () => {
       bookmarks.push(newBookmark);
       await chrome.storage.local.set({ speed_dial_bookmarks: bookmarks });
 
-      alert('已添加到快速拨号！');
+      alert('已添加到书签台！');
       loadStats();
     } else {
       alert('无法添加此页面！');

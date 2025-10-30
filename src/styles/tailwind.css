@@ -171,11 +171,11 @@
   }
 
   .sidebar-content {
-    @apply grid h-full flex-1 grid-cols-3 overflow-hidden;
+    @apply grid h-full min-h-0 flex-1 grid-cols-3 overflow-hidden;
   }
 
   .sidebar-section {
-    @apply flex h-full flex-col border-r border-slate-200 bg-white/90;
+    @apply flex h-full min-h-0 flex-col border-r border-slate-200 bg-white/90;
   }
 
   .sidebar-section:last-child {
@@ -212,7 +212,7 @@
 
   .bookmarks-list,
   .recent-tabs-list {
-    @apply flex-1 overflow-y-auto px-2 pb-4 pt-2;
+    @apply flex-1 overflow-y-auto px-2 pb-4 pt-2 min-h-0;
   }
 
   .bookmark-item,

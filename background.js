@@ -1,9 +1,9 @@
-// Service Worker for Speed Dial Extension
+// Service Worker for 阿露的书签台
 
 // 安装事件
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
-    console.log('Speed Dial 扩展已安装');
+    console.log('阿露的书签台扩展已安装');
 
     // 初始化默认数据
     chrome.storage.local.get('speed_dial_bookmarks', (result) => {
@@ -34,7 +34,7 @@ chrome.runtime.onInstalled.addListener((details) => {
       }
     });
   } else if (details.reason === 'update') {
-    console.log('Speed Dial 扩展已更新');
+    console.log('阿露的书签台扩展已更新');
   }
 });
 
@@ -187,4 +187,4 @@ chrome.commands.onCommand.addListener((command) => {
   }
 });
 
-console.log('Speed Dial Service Worker 已启动');
+console.log('阿露的书签台 Service Worker 已启动');

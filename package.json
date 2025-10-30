@@ -1,7 +1,7 @@
 {
   "name": "new_speed_dial",
   "version": "1.0.0",
-  "description": "一个功能丰富的 Chrome 扩展，用于替代默认的新标签页，提供快速拨号、书签管理和侧边栏功能。基于 Manifest V3 开发，采用网页缩略图截图技术，提供更直观的视觉体验。",
+  "description": "阿露的书签台是一款功能丰富的 Chrome 扩展，可替代默认新标签页，提供书签磁贴、侧边栏和网页缩略图截图等体验。",
   "main": "background.js",
   "license": "MIT",
   "private": true,

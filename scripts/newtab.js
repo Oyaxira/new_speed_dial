@@ -294,7 +294,7 @@ class UIManager {
     });
   }
 
-  // 加载快速拨号
+  // 加载书签磁贴
   async loadDials() {
     const bookmarks = await this.dataManager.getBookmarks();
     const grid = document.getElementById('dials-grid');
