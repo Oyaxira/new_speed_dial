@@ -18,6 +18,8 @@ class SettingsManager {
       maxRecentTabs: 20,
       showFavicons: true,
       showApps: true,
+      showAddButton: true,
+      showSettingsButton: true,
       customCSS: ''
     };
   }

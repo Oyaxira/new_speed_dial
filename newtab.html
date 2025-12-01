@@ -31,10 +31,6 @@
 
     <!-- 侧边栏 -->
     <div id="sidebar" class="sidebar">
-      <div class="sidebar-header">
-        <button class="sidebar-close" id="sidebar-close">×</button>
-      </div>
-
       <div class="sidebar-content">
         <!-- 应用程序面板 -->
         <div class="sidebar-section" data-section="apps">
@@ -57,6 +53,12 @@
         </div>
       </div>
     </div>
+
+    <!-- 侧边栏悬停句柄 -->
+    <button id="sidebar-hover-handle" class="sidebar-hover-handle right-position" type="button" role="button"
+      aria-label="展开侧边栏" aria-controls="sidebar" aria-expanded="false" tabindex="0">
+      <span class="handle-arrow">‹</span>
+    </button>
   </div>
 
   <!-- 添加/编辑书签模态框 -->
@@ -107,6 +109,12 @@
         <button id="confirm-delete" class="btn btn-danger">删除</button>
       </div>
     </div>
+  </div>
+
+  <!-- 自定义右键菜单 -->
+  <div id="context-menu" class="context-menu" role="menu" aria-hidden="true">
+    <button type="button" class="context-menu-item" data-action="add-dial" role="menuitem">➕ 添加书签</button>
+    <button type="button" class="context-menu-item" data-action="open-settings" role="menuitem">⚙️ 打开设置</button>
   </div>
 
   <script src="scripts/newtab.js"></script>

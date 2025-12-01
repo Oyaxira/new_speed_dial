@@ -15,6 +15,8 @@ const defaultSettings = {
   maxRecentTabs: 20,
   showFavicons: true,
   showApps: true,
+  showAddButton: true,
+  showSettingsButton: true,
   customCSS: ''
 };
 
@@ -217,6 +219,14 @@ class UIManager {
   constructor(dataManager) {
     this.dataManager = dataManager;
     this.currentEditingId = null;
+    this.sidebarElement = null;
+    this.sidebarHoverHandle = null;
+    this.sidebarToggleButton = null;
+    this.sidebarCloseTimeout = null;
+    this.currentSettings = { ...defaultSettings };
+    this.contextMenuElement = null;
+    this.contextMenuVisible = false;
+    this.lastContextMenuTrigger = null;
     this.init();
   }
 
@@ -231,15 +241,6 @@ class UIManager {
     // 添加书签按钮
     document.getElementById('add-dial-btn').addEventListener('click', () => {
       this.openAddModal();
-    });
-
-    // 侧边栏切换
-    document.getElementById('sidebar-toggle').addEventListener('click', () => {
-      document.getElementById('sidebar').classList.add('open');
-    });
-
-    document.getElementById('sidebar-close').addEventListener('click', () => {
-      document.getElementById('sidebar').classList.remove('open');
     });
 
     // 模态框事件
@@ -284,6 +285,14 @@ class UIManager {
       chrome.runtime.openOptionsPage();
     });
 
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        this.closeSidebar();
+      }
+    });
+
+    this.bindSidebarInteractions();
+
     // 点击模态框背景关闭
     document.querySelectorAll('.modal').forEach(modal => {
       modal.addEventListener('click', (e) => {
@@ -292,6 +301,235 @@ class UIManager {
         }
       });
     });
+
+    this.bindContextMenu();
+  }
+
+  bindSidebarInteractions() {
+    this.sidebarElement = document.getElementById('sidebar');
+    this.sidebarHoverHandle = document.getElementById('sidebar-hover-handle');
+    this.sidebarToggleButton = document.getElementById('sidebar-toggle');
+
+    if (this.sidebarToggleButton) {
+      this.sidebarToggleButton.addEventListener('click', () => this.toggleSidebar());
+      this.sidebarToggleButton.setAttribute('aria-controls', 'sidebar');
+      this.sidebarToggleButton.setAttribute('aria-expanded', 'false');
+    }
+
+    if (this.sidebarHoverHandle) {
+      this.sidebarHoverHandle.addEventListener('mouseenter', () => this.openSidebar());
+      this.sidebarHoverHandle.addEventListener('focus', () => this.openSidebar());
+      this.sidebarHoverHandle.addEventListener('mouseleave', () => this.scheduleSidebarClose());
+      this.sidebarHoverHandle.addEventListener('blur', () => this.scheduleSidebarClose());
+      this.sidebarHoverHandle.setAttribute('aria-expanded', 'false');
+    }
+
+    if (this.sidebarElement) {
+      this.sidebarElement.addEventListener('mouseenter', () => this.cancelSidebarClose());
+      this.sidebarElement.addEventListener('mouseleave', () => this.scheduleSidebarClose());
+    }
+  }
+
+  toggleSidebar() {
+    if (!this.sidebarElement) {
+      return;
+    }
+    if (this.sidebarElement.classList.contains('open')) {
+      this.closeSidebar();
+    } else {
+      this.openSidebar();
+    }
+  }
+
+  openSidebar() {
+    if (!this.sidebarElement) {
+      return;
+    }
+    this.cancelSidebarClose();
+    this.sidebarElement.classList.add('open');
+    this.setSidebarAriaState(true);
+  }
+
+  closeSidebar() {
+    if (!this.sidebarElement) {
+      return;
+    }
+    this.cancelSidebarClose();
+    this.sidebarElement.classList.remove('open');
+    this.setSidebarAriaState(false);
+  }
+
+  scheduleSidebarClose() {
+    if (!this.sidebarElement || !this.sidebarElement.classList.contains('open')) {
+      return;
+    }
+    this.cancelSidebarClose();
+    this.sidebarCloseTimeout = setTimeout(() => {
+      this.closeSidebar();
+    }, 250);
+  }
+
+  cancelSidebarClose() {
+    if (this.sidebarCloseTimeout) {
+      clearTimeout(this.sidebarCloseTimeout);
+      this.sidebarCloseTimeout = null;
+    }
+  }
+
+  setSidebarAriaState(isOpen) {
+    const expanded = isOpen ? 'true' : 'false';
+    if (this.sidebarToggleButton) {
+      this.sidebarToggleButton.setAttribute('aria-expanded', expanded);
+    }
+    if (this.sidebarHoverHandle) {
+      this.sidebarHoverHandle.setAttribute('aria-expanded', expanded);
+    }
+  }
+
+  bindContextMenu() {
+    this.contextMenuElement = document.getElementById('context-menu');
+    if (!this.contextMenuElement) {
+      return;
+    }
+
+    document.addEventListener('contextmenu', (event) => {
+      if (this.shouldUseNativeContextMenu(event)) {
+        this.hideContextMenu();
+        return;
+      }
+      event.preventDefault();
+      this.openContextMenu(event.clientX, event.clientY, event.target);
+    });
+
+    document.addEventListener('click', (event) => {
+      if (this.contextMenuVisible && this.contextMenuElement && !this.contextMenuElement.contains(event.target)) {
+        this.hideContextMenu();
+      }
+    });
+
+    window.addEventListener('blur', () => this.hideContextMenu());
+    window.addEventListener('resize', () => this.hideContextMenu());
+
+    this.contextMenuElement.addEventListener('click', (event) => {
+      const actionTarget = event.target.closest('[data-action]');
+      if (!actionTarget) {
+        return;
+      }
+      const action = actionTarget.dataset.action;
+      this.handleContextMenuAction(action);
+      this.hideContextMenu();
+    });
+
+    this.contextMenuElement.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+        if (this.shouldUseNativeContextMenu({ target: document.activeElement })) {
+          return;
+        }
+        event.preventDefault();
+        const rect = document.activeElement && typeof document.activeElement.getBoundingClientRect === 'function'
+          ? document.activeElement.getBoundingClientRect()
+          : null;
+        const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
+        const y = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
+        this.openContextMenu(x, y, document.activeElement);
+      } else if (event.key === 'Escape') {
+        this.hideContextMenu();
+      }
+    });
+  }
+
+  shouldUseNativeContextMenu(event) {
+    const target = event?.target;
+    if (!target || !(target instanceof HTMLElement)) {
+      return false;
+    }
+
+    if (target.closest('input, textarea, select, [contenteditable="true"], .allow-native-context')) {
+      return true;
+    }
+
+    if (target.closest('.modal.open')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  openContextMenu(clientX, clientY, triggerElement = null) {
+    if (!this.contextMenuElement) {
+      return;
+    }
+
+    this.lastContextMenuTrigger = triggerElement instanceof HTMLElement ? triggerElement : null;
+    this.contextMenuElement.classList.add('open');
+    this.contextMenuElement.setAttribute('aria-hidden', 'false');
+    this.contextMenuElement.style.left = '0px';
+    this.contextMenuElement.style.top = '0px';
+    this.contextMenuVisible = true;
+
+    requestAnimationFrame(() => {
+      this.positionContextMenu(clientX, clientY);
+      const firstItem = this.contextMenuElement?.querySelector('[data-action]');
+      if (firstItem) {
+        firstItem.focus();
+      }
+    });
+  }
+
+  positionContextMenu(clientX, clientY) {
+    if (!this.contextMenuElement) {
+      return;
+    }
+
+    const { innerWidth, innerHeight } = window;
+    const rect = this.contextMenuElement.getBoundingClientRect();
+    let left = clientX;
+    let top = clientY;
+
+    if (left + rect.width > innerWidth) {
+      left = innerWidth - rect.width - 12;
+    }
+    if (top + rect.height > innerHeight) {
+      top = innerHeight - rect.height - 12;
+    }
+
+    left = Math.max(12, left);
+    top = Math.max(12, top);
+
+    this.contextMenuElement.style.left = `${left}px`;
+    this.contextMenuElement.style.top = `${top}px`;
+  }
+
+  hideContextMenu() {
+    if (!this.contextMenuElement || !this.contextMenuVisible) {
+      return;
+    }
+
+    this.contextMenuElement.classList.remove('open');
+    this.contextMenuElement.setAttribute('aria-hidden', 'true');
+    this.contextMenuVisible = false;
+
+    if (this.lastContextMenuTrigger && typeof this.lastContextMenuTrigger.focus === 'function') {
+      this.lastContextMenuTrigger.focus();
+    }
+    this.lastContextMenuTrigger = null;
+  }
+
+  handleContextMenuAction(action) {
+    switch (action) {
+      case 'add-dial':
+        this.openAddModal();
+        break;
+      case 'open-settings':
+        chrome.runtime.openOptionsPage();
+        break;
+      default:
+        break;
+    }
   }
 
   // 加载书签磁贴
@@ -722,14 +960,11 @@ class UIManager {
     item.className = 'recent-tab-item';
 
     const faviconUrl = tab.favIconUrl || this.dataManager.getFaviconUrl(tab.url || '');
-    // Chrome的时间戳是从Chrome纪元开始的，需要转换为标准时间戳
-    const timeAgo = this.getTimeAgo(session.lastModified);
 
     item.innerHTML = `
       <img src="${faviconUrl}" alt="" class="recent-tab-favicon" onerror="this.style.display='none'">
       <div class="recent-tab-info">
         <div class="recent-tab-title">${this.escapeHtml(tab.title || 'Untitled')}</div>
-        <div class="recent-tab-time">${timeAgo}</div>
       </div>
     `;
 
@@ -1010,6 +1245,7 @@ class UIManager {
   async applySettings() {
     try {
       const settings = await readSettings();
+      this.currentSettings = settings;
       const root = document.documentElement;
       const body = document.body;
 
@@ -1091,9 +1327,24 @@ class UIManager {
       const showTitles = toBoolean(settings.showTitles, defaultSettings.showTitles);
       root.style.setProperty('--title-display', showTitles ? '-webkit-box' : 'none');
 
+      const showAddButton = toBoolean(settings.showAddButton, defaultSettings.showAddButton);
+      const addButton = document.getElementById('add-dial-btn');
+      if (addButton) {
+        addButton.style.display = showAddButton ? '' : 'none';
+        addButton.setAttribute('aria-hidden', showAddButton ? 'false' : 'true');
+      }
+
+      const showSettingsButton = toBoolean(settings.showSettingsButton, defaultSettings.showSettingsButton);
+      const settingsButton = document.getElementById('settings-btn');
+      if (settingsButton) {
+        settingsButton.style.display = showSettingsButton ? '' : 'none';
+        settingsButton.setAttribute('aria-hidden', showSettingsButton ? 'false' : 'true');
+      }
+
       // 应用侧边栏位置
       const sidebar = document.getElementById('sidebar');
       const sidebarToggle = document.getElementById('sidebar-toggle');
+      const sidebarHoverHandle = document.getElementById('sidebar-hover-handle');
 
       if (sidebar && sidebarToggle) {
         if (settings.sidebarPosition === 'left') {
@@ -1106,6 +1357,20 @@ class UIManager {
           sidebar.classList.remove('sidebar-left');
           sidebarToggle.style.right = '20px';
           sidebarToggle.style.left = 'auto';
+        }
+      }
+
+      if (sidebarHoverHandle) {
+        if (settings.sidebarPosition === 'left') {
+          sidebarHoverHandle.classList.add('left-position');
+          sidebarHoverHandle.classList.remove('right-position');
+        } else {
+          sidebarHoverHandle.classList.add('right-position');
+          sidebarHoverHandle.classList.remove('left-position');
+        }
+        const arrow = sidebarHoverHandle.querySelector('.handle-arrow');
+        if (arrow) {
+          arrow.textContent = settings.sidebarPosition === 'left' ? '›' : '‹';
         }
       }
 
@@ -1123,9 +1388,13 @@ class UIManager {
       applyCustomCss(settings.customCSS);
 
       const autoOpenSidebar = toBoolean(settings.autoOpenSidebar, defaultSettings.autoOpenSidebar);
-      if (autoOpenSidebar && sidebar) {
+      if (autoOpenSidebar) {
         setTimeout(() => {
-          sidebar.classList.add('open');
+          if (this.sidebarElement) {
+            this.openSidebar();
+          } else if (sidebar) {
+            sidebar.classList.add('open');
+          }
         }, 300);
       }
 

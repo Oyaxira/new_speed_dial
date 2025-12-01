@@ -18,6 +18,8 @@ const defaultSettings = {
   maxRecentTabs: 20,
   showFavicons: true,
   showApps: true,
+  showAddButton: true,
+  showSettingsButton: true,
   customCSS: ''
 };
 
@@ -218,6 +220,12 @@ async function loadSettings() {
     const showApps = toBoolean(settings.showApps, defaultSettings.showApps);
     setCheckboxState('showApps', showApps);
 
+    const showAddButton = toBoolean(settings.showAddButton, defaultSettings.showAddButton);
+    setCheckboxState('showAddButton', showAddButton);
+
+    const showSettingsButton = toBoolean(settings.showSettingsButton, defaultSettings.showSettingsButton);
+    setCheckboxState('showSettingsButton', showSettingsButton);
+
     setInputValue('customCSS', settings.customCSS || '');
 
     markSelectedPreset(settings.backgroundImage);
@@ -266,6 +274,8 @@ async function saveSettings() {
       maxRecentTabs,
       showFavicons: getCheckboxValue('showFavicons', defaultSettings.showFavicons),
       showApps: getCheckboxValue('showApps', defaultSettings.showApps),
+      showAddButton: getCheckboxValue('showAddButton', defaultSettings.showAddButton),
+      showSettingsButton: getCheckboxValue('showSettingsButton', defaultSettings.showSettingsButton),
       customCSS: getTextareaValue('customCSS', '')
     };
 
