@@ -5,7 +5,7 @@ const SETTINGS_KEY = 'speed_dial_settings';
 // 默认设置
 const defaultSettings = {
   theme: 'light',
-  columns: 'auto',
+  columns: '4',
   showTitles: true,
   backgroundImage: '',
   backgroundImageData: '',

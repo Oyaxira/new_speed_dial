@@ -5,7 +5,7 @@ class SettingsManager {
     this.SETTINGS_KEY = 'speed_dial_settings';
     this.defaultSettings = {
       theme: 'light',
-      columns: 'auto',
+      columns: '4',
       showTitles: true,
       backgroundImage: '',
       backgroundImageData: '',
@@ -98,7 +98,7 @@ export function applyColumns(columns) {
   } else {
     const columnCount = parseInt(columns);
     if (!isNaN(columnCount) && columnCount > 0) {
-      grid.style.gridTemplateColumns = `repeat(${columnCount}, 1fr)`;
+      grid.style.gridTemplateColumns = `repeat(${columnCount}, minmax(0, 1fr))`;
     }
   }
 }

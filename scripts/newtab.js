@@ -2,7 +2,7 @@ const SETTINGS_KEY = 'speed_dial_settings';
 
 const defaultSettings = {
   theme: 'light',
-  columns: 'auto',
+  columns: '4',
   showTitles: true,
   backgroundImage: '',
   backgroundImageData: '',
@@ -319,26 +319,14 @@ class UIManager {
     item.dataset.id = bookmark.id;
     item.draggable = true; // 使元素可拖拽
 
-    // 异步加载缩略图
-    this.dataManager.getThumbnail(bookmark.url).then(thumbnail => {
-      const content = item.querySelector('.dial-content');
-      if (thumbnail && content) {
-        // 如果有缩略图，显示缩略图作为背景
-        content.style.backgroundImage = `url(${thumbnail})`;
-        content.style.backgroundSize = 'contain';
-        content.style.backgroundPosition = 'top center';
-        content.classList.add('has-thumbnail');
-        // 隐藏favicon
-        const favicon = content.querySelector('.dial-favicon');
-        if (favicon) favicon.style.display = 'none';
-      }
-    });
-
     const faviconUrl = this.dataManager.getFaviconUrl(bookmark.url);
 
     item.innerHTML = `
       <div class="dial-content">
-        <img src="${faviconUrl}" alt="" class="dial-favicon" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22><rect fill=%22%23ccc%22 width=%2248%22 height=%2248%22/></svg>'">
+        <div class="dial-thumbnail-shell">
+          <img src="" alt="缩略图" class="dial-thumbnail-image" loading="lazy" decoding="async">
+          <img src="${faviconUrl}" alt="" class="dial-favicon" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22><rect fill=%22%23ccc%22 width=%2248%22 height=%2248%22/></svg>'">
+        </div>
         <div class="dial-title">${this.escapeHtml(bookmark.title)}</div>
         <div class="dial-actions">
           <button class="dial-action-btn edit" data-id="${bookmark.id}" title="编辑">✏️</button>
@@ -346,6 +334,47 @@ class UIManager {
         </div>
       </div>
     `;
+
+    const thumbnailImage = item.querySelector('.dial-thumbnail-image');
+    const faviconElement = item.querySelector('.dial-favicon');
+
+    const applyThumbnail = (source) => {
+      if (!thumbnailImage) {
+        return;
+      }
+      if (source) {
+        thumbnailImage.src = source;
+        thumbnailImage.alt = `${bookmark.title} 缩略图`;
+        thumbnailImage.style.display = 'block';
+        item.classList.add('has-thumbnail');
+        if (faviconElement) {
+          faviconElement.style.display = 'none';
+        }
+      }
+    };
+
+    if (thumbnailImage) {
+      thumbnailImage.style.display = 'none';
+      thumbnailImage.addEventListener('error', () => {
+        thumbnailImage.style.display = 'none';
+        thumbnailImage.removeAttribute('src');
+        thumbnailImage.alt = '缩略图加载失败';
+        item.classList.remove('has-thumbnail');
+        if (faviconElement) {
+          faviconElement.style.display = '';
+        }
+      });
+    }
+
+    if (bookmark.customThumbnailUrl) {
+      applyThumbnail(bookmark.customThumbnailUrl);
+    } else {
+      this.dataManager.getThumbnail(bookmark.url).then(thumbnail => {
+        if (thumbnail) {
+          applyThumbnail(thumbnail);
+        }
+      });
+    }
 
     // 拖拽事件
     item.addEventListener('dragstart', (e) => this.handleDragStart(e));
@@ -385,6 +414,10 @@ class UIManager {
       document.getElementById('modal-title').textContent = '编辑书签';
       document.getElementById('dial-url').value = bookmark.url;
       document.getElementById('dial-title').value = bookmark.title;
+      const thumbnailInput = document.getElementById('dial-thumbnail-url');
+      if (thumbnailInput) {
+        thumbnailInput.value = bookmark.customThumbnailUrl || '';
+      }
       // 显示重新截图按钮
       document.getElementById('capture-thumbnail-group').style.display = 'block';
       this.openModal('dial-modal');
@@ -397,6 +430,10 @@ class UIManager {
     document.getElementById('modal-title').textContent = '添加书签';
     document.getElementById('dial-url').value = '';
     document.getElementById('dial-title').value = '';
+    const thumbnailInput = document.getElementById('dial-thumbnail-url');
+    if (thumbnailInput) {
+      thumbnailInput.value = '';
+    }
     // 隐藏重新截图按钮
     document.getElementById('capture-thumbnail-group').style.display = 'none';
     this.openModal('dial-modal');
@@ -450,10 +487,38 @@ class UIManager {
     }
   }
 
+  normalizeThumbnailUrl(rawValue) {
+    if (!rawValue) {
+      return '';
+    }
+
+    const trimmed = rawValue.trim();
+    if (trimmed.toLowerCase().startsWith('data:image')) {
+      return trimmed;
+    }
+
+    let formatted = trimmed;
+    if (!/^https?:\/\//i.test(formatted)) {
+      formatted = `https://${formatted}`;
+    }
+
+    try {
+      const parsed = new URL(formatted);
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        return null;
+      }
+      return parsed.href;
+    } catch (error) {
+      return null;
+    }
+  }
+
   // 保存书签
   async saveDial() {
     const url = document.getElementById('dial-url').value.trim();
     const title = document.getElementById('dial-title').value.trim();
+    const thumbnailInput = document.getElementById('dial-thumbnail-url');
+    const rawThumbnailUrl = thumbnailInput ? thumbnailInput.value.trim() : '';
 
     if (!url || !title) {
       alert('请填写完整信息');
@@ -473,31 +538,39 @@ class UIManager {
       return;
     }
 
+    const normalizedThumbnailUrl = this.normalizeThumbnailUrl(rawThumbnailUrl);
+    if (rawThumbnailUrl && normalizedThumbnailUrl === null) {
+      alert('请输入有效的图片 URL');
+      return;
+    }
+
+    const bookmarkPayload = {
+      url: formattedUrl,
+      title: title,
+      customThumbnailUrl: normalizedThumbnailUrl || ''
+    };
+
     if (this.currentEditingId) {
       // 更新
-      await this.dataManager.updateBookmark(this.currentEditingId, {
-        url: formattedUrl,
-        title: title
-      });
+      await this.dataManager.updateBookmark(this.currentEditingId, bookmarkPayload);
     } else {
       // 添加
-      const bookmark = await this.dataManager.addBookmark({
-        url: formattedUrl,
-        title: title
-      });
+      const bookmark = await this.dataManager.addBookmark(bookmarkPayload);
 
-      // 异步截取缩略图（不阻塞UI）
-      this.dataManager.captureThumbnail(formattedUrl).then(thumbnail => {
-        if (thumbnail) {
-          this.dataManager.saveThumbnail(formattedUrl, thumbnail).then(() => {
-            console.log('缩略图已保存:', formattedUrl);
-            // 重新加载以显示缩略图
-            this.loadDials();
-          });
-        }
-      }).catch(err => {
-        console.error('截图失败:', err);
-      });
+      if (!bookmarkPayload.customThumbnailUrl) {
+        // 异步截取缩略图（不阻塞UI）
+        this.dataManager.captureThumbnail(formattedUrl).then(thumbnail => {
+          if (thumbnail) {
+            this.dataManager.saveThumbnail(formattedUrl, thumbnail).then(() => {
+              console.log('缩略图已保存:', formattedUrl);
+              // 重新加载以显示缩略图
+              this.loadDials();
+            });
+          }
+        }).catch(err => {
+          console.error('截图失败:', err);
+        });
+      }
     }
 
     this.closeModal('dial-modal');
@@ -966,7 +1039,7 @@ class UIManager {
         if (settings.columns && settings.columns !== 'auto') {
           const columnCount = parseInt(settings.columns, 10);
           if (Number.isFinite(columnCount) && columnCount > 0) {
-            dialsGrid.style.gridTemplateColumns = `repeat(${columnCount}, 1fr)`;
+            dialsGrid.style.gridTemplateColumns = `repeat(${columnCount}, minmax(0, 1fr))`;
           } else {
             dialsGrid.style.gridTemplateColumns = '';
           }

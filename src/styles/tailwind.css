@@ -68,7 +68,7 @@
   }
 
   .dial-item {
-    @apply relative flex aspect-video flex-col overflow-hidden rounded-2xl bg-white/90 shadow-card backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl;
+    @apply relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.15)] backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_35px_80px_rgba(15,23,42,0.18)];
   }
 
   .dial-item.dragging {
@@ -76,34 +76,38 @@
   }
 
   .dial-content {
-    @apply relative flex h-full flex-col items-center justify-center gap-3 p-6 text-center transition-all duration-300;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+    @apply relative flex h-full flex-col items-stretch justify-between gap-4 p-4 text-left transition-all duration-300;
   }
 
-  .dial-content.has-thumbnail {
-    @apply justify-end p-0;
+  .dial-thumbnail-shell {
+    @apply relative flex aspect-video w-full flex-1 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/90 shadow-inner;
   }
 
-  .dial-content.has-thumbnail::after {
-    content: '';
-    @apply pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent opacity-100 transition-opacity;
+  .dial-thumbnail-image {
+    @apply absolute inset-0 h-full w-full object-cover;
+    display: none;
   }
 
-  .dial-content.has-thumbnail .dial-title {
-    @apply relative z-[1] w-full px-4 pb-4 pt-8 text-left text-base font-medium leading-snug text-white;
-    text-shadow: 0 8px 20px rgba(15, 23, 42, 0.6), 0 3px 8px rgba(15, 23, 42, 0.45);
+  .dial-item.has-thumbnail .dial-thumbnail-shell {
+    @apply border-slate-300 bg-slate-900/40 shadow-[0_25px_60px_rgba(15,23,42,0.35)];
+  }
+
+  .dial-item.has-thumbnail .dial-thumbnail-image {
+    display: block;
+  }
+
+  .dial-item.has-thumbnail .dial-favicon {
+    @apply hidden;
   }
 
   .dial-favicon {
     display: var(--favicon-display);
-    @apply h-14 w-14 rounded-xl object-cover shadow-md;
+    @apply relative z-[1] h-16 w-16 rounded-2xl object-cover shadow-lg transition-all duration-300;
   }
 
   .dial-title {
     display: var(--title-display);
-    @apply max-w-full overflow-hidden text-sm font-medium text-slate-900;
+    @apply w-full max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base font-semibold text-slate-900 shadow-inner;
     text-overflow: ellipsis;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -309,6 +313,10 @@
 
   .form-group input {
     @apply w-full rounded-xl border border-slate-300 bg-white/95 px-3 py-2 text-sm text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10;
+  }
+
+  .form-hint {
+    @apply text-xs text-slate-400;
   }
 
   .modal-footer {
