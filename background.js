@@ -1,7 +1,38 @@
 // Service Worker for 阿露的书签台
 
+const CONTEXT_MENU_IDS = {
+  addBookmark: 'aru-context-add-bookmark',
+  openSettings: 'aru-context-open-settings'
+};
+
+function registerContextMenus() {
+  if (!chrome.contextMenus) {
+    return;
+  }
+
+  const newtabPattern = `chrome-extension://${chrome.runtime.id}/newtab.html*`;
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: CONTEXT_MENU_IDS.addBookmark,
+      title: '添加书签',
+      contexts: ['page'],
+      documentUrlPatterns: [newtabPattern]
+    });
+
+    chrome.contextMenus.create({
+      id: CONTEXT_MENU_IDS.openSettings,
+      title: '打开设置',
+      contexts: ['page'],
+      documentUrlPatterns: [newtabPattern]
+    });
+  });
+}
+
+registerContextMenus();
+
 // 安装事件
 chrome.runtime.onInstalled.addListener((details) => {
+  registerContextMenus();
   if (details.reason === 'install') {
     console.log('阿露的书签台扩展已安装');
 
@@ -35,6 +66,24 @@ chrome.runtime.onInstalled.addListener((details) => {
     });
   } else if (details.reason === 'update') {
     console.log('阿露的书签台扩展已更新');
+  }
+});
+
+chrome.contextMenus?.onClicked.addListener((info, tab) => {
+  if (!tab || typeof tab.id !== 'number') {
+    return;
+  }
+
+  if (info.menuItemId === CONTEXT_MENU_IDS.addBookmark) {
+    chrome.tabs.sendMessage(tab.id, { type: 'open-add-bookmark-modal' }, () => {
+      if (chrome.runtime.lastError) {
+        console.warn('无法打开添加书签对话框:', chrome.runtime.lastError.message);
+      }
+    });
+  }
+
+  if (info.menuItemId === CONTEXT_MENU_IDS.openSettings) {
+    chrome.runtime.openOptionsPage();
   }
 });
 

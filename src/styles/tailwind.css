@@ -6,6 +6,7 @@
   :root {
     --favicon-display: block;
     --title-display: -webkit-box;
+    --dial-title-font-size: 0.9rem;
   }
 
   html {
@@ -63,12 +64,12 @@
   }
 
   .dials-grid {
-    @apply grid gap-8;
+    @apply grid gap-6;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   }
 
   .dial-item {
-    @apply relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.15)] backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_35px_80px_rgba(15,23,42,0.18)];
+    @apply relative flex flex-col overflow-hidden rounded-2xl border border-transparent bg-white transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_20px_45px_rgba(15,23,42,0.15)];
   }
 
   .dial-item.dragging {
@@ -76,11 +77,11 @@
   }
 
   .dial-content {
-    @apply relative flex h-full flex-col items-stretch justify-between gap-4 p-4 text-left transition-all duration-300;
+    @apply relative flex h-full flex-col items-stretch justify-between text-left transition-all duration-300;
   }
 
   .dial-thumbnail-shell {
-    @apply relative flex aspect-video w-full flex-1 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/90 shadow-inner;
+    @apply relative flex aspect-video w-full flex-1 items-center justify-center overflow-hidden rounded-2xl bg-white;
   }
 
   .dial-thumbnail-image {
@@ -89,7 +90,7 @@
   }
 
   .dial-item.has-thumbnail .dial-thumbnail-shell {
-    @apply border-slate-300 bg-slate-900/40 shadow-[0_25px_60px_rgba(15,23,42,0.35)];
+    @apply bg-white;
   }
 
   .dial-item.has-thumbnail .dial-thumbnail-image {
@@ -107,7 +108,15 @@
 
   .dial-title {
     display: var(--title-display);
-    @apply w-full max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base font-semibold text-slate-900 shadow-inner;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 0.35rem 0.25rem 0.25rem;
+    text-align: center;
+    font-size: var(--dial-title-font-size);
+    line-height: calc(var(--dial-title-font-size) + 0.2rem);
+    font-weight: 500;
+    color: #334155;
     text-overflow: ellipsis;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -126,7 +135,7 @@
   }
 
   .dial-actions {
-    @apply absolute right-3 top-3 hidden items-center gap-2;
+    @apply absolute right-2 top-2 hidden items-center gap-2;
   }
 
   .dial-item:hover .dial-actions {
@@ -337,18 +346,6 @@
 
   .modal-footer {
     @apply flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4;
-  }
-
-  .context-menu {
-    @apply fixed z-[2000] hidden min-w-[200px] flex-col gap-1 rounded-2xl border border-slate-200 bg-white/95 p-2 text-sm text-slate-600 shadow-[0_25px_70px_rgba(15,23,42,0.35)] backdrop-blur;
-  }
-
-  .context-menu.open {
-    @apply flex;
-  }
-
-  .context-menu-item {
-    @apply flex w-full items-center gap-3 rounded-xl px-4 py-2 text-left text-sm font-medium text-slate-600 transition hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40;
   }
 
   /* Toast */

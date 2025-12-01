@@ -224,9 +224,6 @@ class UIManager {
     this.sidebarToggleButton = null;
     this.sidebarCloseTimeout = null;
     this.currentSettings = { ...defaultSettings };
-    this.contextMenuElement = null;
-    this.contextMenuVisible = false;
-    this.lastContextMenuTrigger = null;
     this.init();
   }
 
@@ -301,8 +298,6 @@ class UIManager {
         }
       });
     });
-
-    this.bindContextMenu();
   }
 
   bindSidebarInteractions() {
@@ -383,152 +378,6 @@ class UIManager {
     }
     if (this.sidebarHoverHandle) {
       this.sidebarHoverHandle.setAttribute('aria-expanded', expanded);
-    }
-  }
-
-  bindContextMenu() {
-    this.contextMenuElement = document.getElementById('context-menu');
-    if (!this.contextMenuElement) {
-      return;
-    }
-
-    document.addEventListener('contextmenu', (event) => {
-      if (this.shouldUseNativeContextMenu(event)) {
-        this.hideContextMenu();
-        return;
-      }
-      event.preventDefault();
-      this.openContextMenu(event.clientX, event.clientY, event.target);
-    });
-
-    document.addEventListener('click', (event) => {
-      if (this.contextMenuVisible && this.contextMenuElement && !this.contextMenuElement.contains(event.target)) {
-        this.hideContextMenu();
-      }
-    });
-
-    window.addEventListener('blur', () => this.hideContextMenu());
-    window.addEventListener('resize', () => this.hideContextMenu());
-
-    this.contextMenuElement.addEventListener('click', (event) => {
-      const actionTarget = event.target.closest('[data-action]');
-      if (!actionTarget) {
-        return;
-      }
-      const action = actionTarget.dataset.action;
-      this.handleContextMenuAction(action);
-      this.hideContextMenu();
-    });
-
-    this.contextMenuElement.addEventListener('contextmenu', (event) => {
-      event.preventDefault();
-    });
-
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
-        if (this.shouldUseNativeContextMenu({ target: document.activeElement })) {
-          return;
-        }
-        event.preventDefault();
-        const rect = document.activeElement && typeof document.activeElement.getBoundingClientRect === 'function'
-          ? document.activeElement.getBoundingClientRect()
-          : null;
-        const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
-        const y = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
-        this.openContextMenu(x, y, document.activeElement);
-      } else if (event.key === 'Escape') {
-        this.hideContextMenu();
-      }
-    });
-  }
-
-  shouldUseNativeContextMenu(event) {
-    const target = event?.target;
-    if (!target || !(target instanceof HTMLElement)) {
-      return false;
-    }
-
-    if (target.closest('input, textarea, select, [contenteditable="true"], .allow-native-context')) {
-      return true;
-    }
-
-    if (target.closest('.modal.open')) {
-      return true;
-    }
-
-    return false;
-  }
-
-  openContextMenu(clientX, clientY, triggerElement = null) {
-    if (!this.contextMenuElement) {
-      return;
-    }
-
-    this.lastContextMenuTrigger = triggerElement instanceof HTMLElement ? triggerElement : null;
-    this.contextMenuElement.classList.add('open');
-    this.contextMenuElement.setAttribute('aria-hidden', 'false');
-    this.contextMenuElement.style.left = '0px';
-    this.contextMenuElement.style.top = '0px';
-    this.contextMenuVisible = true;
-
-    requestAnimationFrame(() => {
-      this.positionContextMenu(clientX, clientY);
-      const firstItem = this.contextMenuElement?.querySelector('[data-action]');
-      if (firstItem) {
-        firstItem.focus();
-      }
-    });
-  }
-
-  positionContextMenu(clientX, clientY) {
-    if (!this.contextMenuElement) {
-      return;
-    }
-
-    const { innerWidth, innerHeight } = window;
-    const rect = this.contextMenuElement.getBoundingClientRect();
-    let left = clientX;
-    let top = clientY;
-
-    if (left + rect.width > innerWidth) {
-      left = innerWidth - rect.width - 12;
-    }
-    if (top + rect.height > innerHeight) {
-      top = innerHeight - rect.height - 12;
-    }
-
-    left = Math.max(12, left);
-    top = Math.max(12, top);
-
-    this.contextMenuElement.style.left = `${left}px`;
-    this.contextMenuElement.style.top = `${top}px`;
-  }
-
-  hideContextMenu() {
-    if (!this.contextMenuElement || !this.contextMenuVisible) {
-      return;
-    }
-
-    this.contextMenuElement.classList.remove('open');
-    this.contextMenuElement.setAttribute('aria-hidden', 'true');
-    this.contextMenuVisible = false;
-
-    if (this.lastContextMenuTrigger && typeof this.lastContextMenuTrigger.focus === 'function') {
-      this.lastContextMenuTrigger.focus();
-    }
-    this.lastContextMenuTrigger = null;
-  }
-
-  handleContextMenuAction(action) {
-    switch (action) {
-      case 'add-dial':
-        this.openAddModal();
-        break;
-      case 'open-settings':
-        chrome.runtime.openOptionsPage();
-        break;
-      default:
-        break;
     }
   }
 
@@ -1320,6 +1169,14 @@ class UIManager {
       };
       root.style.fontSize = fontSizeMap[settings.fontSize] || fontSizeMap.medium;
 
+      const titleFontSizeMap = {
+        small: '0.78rem',
+        medium: '0.88rem',
+        large: '0.98rem',
+        xlarge: '1.08rem'
+      };
+      root.style.setProperty('--dial-title-font-size', titleFontSizeMap[settings.fontSize] || titleFontSizeMap.medium);
+
       // 应用显示图标与标题设置
       const showFavicons = toBoolean(settings.showFavicons, defaultSettings.showFavicons);
       root.style.setProperty('--favicon-display', showFavicons ? 'block' : 'none');
@@ -1426,3 +1283,12 @@ setInterval(() => {
 
 // 初始加载Chrome书签
 uiManager.loadChromeBookmarks();
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === 'open-add-bookmark-modal') {
+    uiManager.openAddModal();
+    if (typeof sendResponse === 'function') {
+      sendResponse({ success: true });
+    }
+  }
+});

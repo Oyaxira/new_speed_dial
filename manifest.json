@@ -9,7 +9,8 @@
     "tabs",
     "sessions",
     "management",
-    "history"
+    "history",
+    "contextMenus"
   ],
   "host_permissions": [
     "<all_urls>"
